@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html,
+  body {
+    @apply bg-canvas text-ink antialiased;
+    font-feature-settings: "ss01", "cv01";
+  }
+
+  /* Serif display for headings, echoing the Oracle mock's editorial tone. */
+  .font-display {
+    @apply font-serif tracking-tightest;
+  }
+
+  ::selection {
+    @apply bg-teal-tint text-teal-deep;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-surface shadow-card;
+  }
+
+  .hairline {
+    @apply border-line;
+  }
+
+  .label-eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted;
+  }
+
+  /* Thin, restrained scrollbars for dense panels. */
+  .scroll-slim {
+    scrollbar-width: thin;
+    scrollbar-color: #D4D1C8 transparent;
+  }
+  .scroll-slim::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scroll-slim::-webkit-scrollbar-thumb {
+    background: #D4D1C8;
+    border-radius: 8px;
+  }
+  .scroll-slim::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
