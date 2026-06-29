@@ -1,40 +1,23 @@
 "use client";
 
-import {
-  FileText,
-  LayoutGrid,
-  Network,
-  Radio,
-  Sparkles,
-} from "lucide-react";
+import { LayoutGrid } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 
+interface CompanyNav {
+  id: string;
+  name: string;
+  shortName: string;
+  brandColor: string;
+}
+
 const NAV = [
-  { href: "/", label: "Dashboard", icon: LayoutGrid, match: (p: string) => p === "/" },
-  {
-    href: "/history",
-    label: "Diagnostic Sessions",
-    icon: Radio,
-    match: (p: string) => p.startsWith("/history") || p.startsWith("/session") || p.startsWith("/diagnostics"),
-  },
-  {
-    href: "/frameworks",
-    label: "Frameworks",
-    icon: Network,
-    match: (p: string) => p.startsWith("/frameworks"),
-  },
-  {
-    href: "/reports",
-    label: "Reports",
-    icon: FileText,
-    match: (p: string) => p.startsWith("/reports"),
-  },
+  { href: "/", label: "Overview", icon: LayoutGrid, match: (p: string) => p === "/" },
 ];
 
-export function SidebarNav() {
+export function SidebarNav({ companies }: { companies: CompanyNav[] }) {
   const pathname = usePathname() || "/";
 
   return (
@@ -45,7 +28,7 @@ export function SidebarNav() {
           <br />
           Diagnostics
         </div>
-        <div className="mt-1 text-xs text-ink-muted">Consulting as a Service</div>
+        <div className="mt-1 text-xs text-ink-muted">By ValoremFirst</div>
       </Link>
 
       <nav className="mt-9 flex flex-col gap-1">
@@ -73,20 +56,53 @@ export function SidebarNav() {
         })}
       </nav>
 
-      <div className="mt-auto">
-        <div className="mb-5 border-t border-line pt-5">
-          <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-teal px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-teal-deep">
-            <Sparkles className="h-4 w-4" />
-            Upgrade Plan
-          </button>
+      {/* Companies */}
+      <div className="mt-7">
+        <div className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-faint">
+          Companies
         </div>
-        <div className="flex items-center gap-3 px-1">
+        <div className="flex flex-col gap-1">
+          {companies.map((c) => {
+            const href = `/companies/${c.id}`;
+            const active = pathname.startsWith(href);
+            return (
+              <Link
+                key={c.id}
+                href={href}
+                className={cn(
+                  "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                  active
+                    ? "bg-surface-muted text-ink"
+                    : "text-ink-soft hover:bg-surface-muted hover:text-ink",
+                )}
+              >
+                {active && (
+                  <span
+                    className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full"
+                    style={{ background: c.brandColor }}
+                  />
+                )}
+                <span
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold text-white"
+                  style={{ background: c.brandColor }}
+                >
+                  {c.shortName}
+                </span>
+                {c.name}
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-auto">
+        <div className="flex items-center gap-3 border-t border-line px-1 pt-5">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-deep text-sm font-semibold text-white">
             CC
           </div>
           <div className="leading-tight">
-            <div className="text-sm font-medium text-ink">User Profile</div>
-            <div className="text-xs text-ink-muted">Senior Consultant</div>
+            <div className="text-sm font-medium text-ink">Connor Campagna</div>
+            <div className="text-xs text-ink-muted">Valorem First - Digital Support Engineer</div>
           </div>
         </div>
       </div>

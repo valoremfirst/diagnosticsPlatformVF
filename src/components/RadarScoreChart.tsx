@@ -16,14 +16,23 @@ export interface RadarDatum {
   benchmark?: number;
 }
 
-export function RadarScoreChart({ data }: { data: RadarDatum[] }) {
+export function RadarScoreChart({
+  data,
+  accent = "#1E4D5A",
+}: {
+  data: RadarDatum[];
+  accent?: string;
+}) {
   const [showBenchmark, setShowBenchmark] = useState(true);
 
   return (
     <div>
       <div className="mb-2 flex items-center justify-end gap-4 text-xs">
         <span className="inline-flex items-center gap-1.5 text-ink-soft">
-          <span className="h-2.5 w-2.5 rounded-full bg-teal" />
+          <span
+            className="h-2.5 w-2.5 rounded-full"
+            style={{ background: accent }}
+          />
           Current State
         </span>
         <button
@@ -65,9 +74,9 @@ export function RadarScoreChart({ data }: { data: RadarDatum[] }) {
             <Radar
               name="Current State"
               dataKey="current"
-              stroke="#1E4D5A"
+              stroke={accent}
               strokeWidth={2.2}
-              fill="#1E4D5A"
+              fill={accent}
               fillOpacity={0.14}
             />
           </RadarChart>

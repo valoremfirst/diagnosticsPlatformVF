@@ -90,10 +90,26 @@ export interface DiagnosticResult {
   roadmap: RoadmapItem[];
 }
 
+export interface Company {
+  id: string;
+  name: string;
+  /** Short label for avatars / compact UI, e.g. "VF". */
+  shortName: string;
+  /** User-editable brand colour (hex), used to theme the company dashboard. */
+  brandColor: string;
+  sector?: string;
+  tagline?: string;
+  createdAt: string;
+}
+
 export interface DiagnosticSession {
   id: string;
+  /** Owning company. Optional for legacy/ad-hoc sessions. */
+  companyId?: string;
   companyName: string;
   function: DiagnosticFunction;
+  /** Optional label for the uploaded transcript, e.g. "CFO interview". */
+  title?: string;
   status: DiagnosticStatus;
   // Optional contextual metadata captured at creation.
   clientContact?: string;

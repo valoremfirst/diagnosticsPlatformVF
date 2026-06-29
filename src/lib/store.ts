@@ -1,5 +1,7 @@
-import { MOCK_SESSIONS } from "./mock-data";
+import { MOCK_COMPANIES, MOCK_SESSIONS } from "./mock-data";
 import type {
+  Company,
+  DiagnosticFunction,
   DiagnosticResult,
   DiagnosticSession,
   TranscriptTurn,
@@ -18,6 +20,8 @@ import type {
 declare global {
   // eslint-disable-next-line no-var
   var __diagnosticStore: Map<string, DiagnosticSession> | undefined;
+  // eslint-disable-next-line no-var
+  var __companyStore: Map<string, Company> | undefined;
 }
 
 function db(): Map<string, DiagnosticSession> {
@@ -30,6 +34,17 @@ function db(): Map<string, DiagnosticSession> {
     globalThis.__diagnosticStore = map;
   }
   return globalThis.__diagnosticStore;
+}
+
+function companyDb(): Map<string, Company> {
+  if (!globalThis.__companyStore) {
+    const map = new Map<string, Company>();
+    for (const c of MOCK_COMPANIES) {
+      map.set(c.id, structuredClone(c));
+    }
+    globalThis.__companyStore = map;
+  }
+  return globalThis.__companyStore;
 }
 
 export function supabaseEnabled(): boolean {
@@ -60,8 +75,10 @@ export function createSession(
   const id = input.id ?? generateId();
   const session: DiagnosticSession = {
     id,
+    companyId: input.companyId,
     companyName: input.companyName,
     function: input.function,
+    title: input.title,
     status: input.status ?? "draft",
     clientContact: input.clientContact,
     sector: input.sector,
@@ -102,5 +119,115 @@ export function setResult(
     result,
     status: "complete",
     completedAt: new Date().toISOString(),
+  });
+}
+
+export function deleteSession(id: string): boolean {
+  return db().delete(id);
+}
+
+// ---------------------------------------------------------------------------
+// Companies
+// ---------------------------------------------------------------------------
+
+export function listCompanies(): Company[] {
+  return [...companyDb().values()].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+}
+
+export function getCompany(id: string): Company | undefined {
+  return companyDb().get(id);
+}
+
+function slugify(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "company"
+  );
+}
+
+function shortNameFrom(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "CO";
+  if (words.length === 1) return words[0].slice(0, 3).toUpperCase();
+  return words
+    .slice(0, 3)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+}
+
+export function createCompany(
+  input: Pick<Company, "name"> & Partial<Company>,
+): Company {
+  const name = input.name.trim();
+  // Ensure a unique id even if two companies share a name.
+  let id = input.id ?? slugify(name);
+  let n = 2;
+  while (companyDb().has(id)) {
+    id = `${slugify(name)}-${n++}`;
+  }
+  const company: Company = {
+    id,
+    name,
+    shortName: input.shortName?.trim() || shortNameFrom(name),
+    brandColor: input.brandColor ?? "#1E4D5A",
+    sector: input.sector?.trim() || undefined,
+    tagline: input.tagline?.trim() || undefined,
+    createdAt: input.createdAt ?? new Date().toISOString(),
+  };
+  companyDb().set(id, company);
+  return company;
+}
+
+export function updateCompany(
+  id: string,
+  patch: Partial<Company>,
+): Company | undefined {
+  const existing = companyDb().get(id);
+  if (!existing) return undefined;
+  // id and createdAt are immutable.
+  const next = { ...existing, ...patch, id: existing.id, createdAt: existing.createdAt };
+  companyDb().set(id, next);
+  return next;
+}
+
+/** All diagnostics belonging to a company, newest first. */
+export function listSessionsByCompany(companyId: string): DiagnosticSession[] {
+  return listSessions().filter((s) => s.companyId === companyId);
+}
+
+/** Every transcript/diagnostic uploaded to a (company, function) section. */
+export function listSectionSessions(
+  companyId: string,
+  fn: DiagnosticFunction,
+): DiagnosticSession[] {
+  return listSessions().filter(
+    (s) => s.companyId === companyId && s.function === fn,
+  );
+}
+
+/**
+ * Create a new diagnostic for a (company, function) section. Each uploaded
+ * transcript is its own diagnostic, so a section can hold many.
+ */
+export function createSectionSession(
+  companyId: string,
+  fn: DiagnosticFunction,
+  patch: Partial<DiagnosticSession>,
+): DiagnosticSession | undefined {
+  const company = getCompany(companyId);
+  if (!company) return undefined;
+  return createSession({
+    companyId,
+    companyName: company.name,
+    function: fn,
+    status: "draft",
+    selectedFrameworks: [],
+    ...patch,
   });
 }
