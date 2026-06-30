@@ -54,22 +54,6 @@ export default async function OverviewPage() {
 
   return (
     <div className="animate-fade-in">
-      {/* Hero */}
-      <section className="mb-8 overflow-hidden rounded-2xl border border-line bg-gradient-to-br from-teal-deep via-teal to-teal-500 p-8 text-white">
-        <div className="max-w-xl">
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium">
-            <Sparkles className="h-3.5 w-3.5" />
-            Agentic diagnostics
-          </div>
-          <h1 className="mt-4 font-display text-4xl leading-tight">
-            Your portfolio of company diagnostics.
-          </h1>
-          <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-white/80">
-            Each company has its own branded dashboard. Add a transcript to any
-            business function to score it against five maturity frameworks.
-          </p>
-        </div>
-      </section>
 
       {/* Company cards */}
       <section className="mb-8">
