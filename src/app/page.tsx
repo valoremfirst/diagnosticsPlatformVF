@@ -58,7 +58,7 @@ export default async function OverviewPage() {
       {/* Company cards */}
       <section className="mb-8">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-display text-xl text-ink">Companies</h2>
+          <h2 className="font-display text-xl text-ink">All Companies</h2>
           <AddCompanyButton />
         </div>
         <div className="grid gap-5 sm:grid-cols-2">

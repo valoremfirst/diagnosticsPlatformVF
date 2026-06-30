@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { isAdminAuthed } from "@/lib/admin-auth";
 import { getCompany, updateCompany } from "@/lib/store";
 import type { Company, DiagnosticFunction } from "@/lib/types";
 
@@ -71,6 +72,14 @@ export async function PATCH(
     patch.description = String(body.description).trim();
   }
   if (body.agentIds !== undefined && typeof body.agentIds === "object") {
+    // Agent IDs are admin-only — they control which ElevenLabs conversations
+    // get pulled, so writing them requires a valid admin session.
+    if (!isAdminAuthed()) {
+      return NextResponse.json(
+        { error: "Admin authentication required to change agent IDs." },
+        { status: 403 },
+      );
+    }
     // Keep only valid function keys with non-empty string ids.
     const raw = body.agentIds as Record<string, unknown>;
     const cleaned: Partial<Record<DiagnosticFunction, string>> = {};
