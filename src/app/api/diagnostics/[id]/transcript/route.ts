@@ -8,7 +8,7 @@ export async function POST(
   req: Request,
   { params }: { params: { id: string } },
 ) {
-  const session = getSession(params.id);
+  const session = await getSession(params.id);
   if (!session) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
@@ -31,8 +31,8 @@ export async function POST(
     (t) => t && typeof t.text === "string",
   );
 
-  setTranscript(params.id, transcript);
-  updateSession(params.id, { status: "processing" });
+  await setTranscript(params.id, transcript);
+  await updateSession(params.id, { status: "processing" });
 
   return NextResponse.json({ ok: true, turns: transcript.length });
 }

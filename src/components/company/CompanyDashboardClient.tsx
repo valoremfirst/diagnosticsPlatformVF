@@ -1,11 +1,11 @@
 "use client";
 
-import { Building2, FileText, Plus } from "lucide-react";
+import { Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, useState } from "react";
 
 import { BrandColorPicker } from "@/components/company/BrandColorPicker";
-import { SectionTranscriptDialog } from "@/components/company/SectionTranscriptDialog";
+import { SectionDetail } from "@/components/company/SectionDetail";
 import { MetricCard } from "@/components/MetricCard";
 import { RadarScoreChart, type RadarDatum } from "@/components/RadarScoreChart";
 import { Card } from "@/components/ui/Card";
@@ -15,7 +15,7 @@ import type {
   DiagnosticFunction,
   DiagnosticStatus,
 } from "@/lib/types";
-import { cn, MATURITY_LABEL, scoreTone } from "@/lib/utils";
+import { cn, scoreTone } from "@/lib/utils";
 
 export interface SectionTranscript {
   sessionId: string;
@@ -26,14 +26,22 @@ export interface SectionTranscript {
   createdAt: string;
 }
 
+export interface SectionFrameworkScore {
+  name: string;
+  short: string;
+  score: number | null;
+}
+
 export interface SectionView {
   fn: DiagnosticFunction;
   label: string;
   agentName: string;
   agentTitle: string;
   blurb: string;
+  probesFor: string[];
   avgScore: number | null;
   maturity: string | null;
+  frameworks: SectionFrameworkScore[];
   transcripts: SectionTranscript[];
 }
 
@@ -58,12 +66,15 @@ export function CompanyDashboardClient({
   const router = useRouter();
   const [savedColor, setSavedColor] = useState(company.brandColor);
   const [preview, setPreview] = useState<string | null>(null);
-  const [openFn, setOpenFn] = useState<DiagnosticFunction | null>(null);
+  const [activeFn, setActiveFn] = useState<DiagnosticFunction>(
+    sections[0]?.fn ?? "finance",
+  );
 
   const brand = preview ?? savedColor;
   const ink = readableInk(brand);
   const overlay = withAlpha(ink === "#FFFFFF" ? "#FFFFFF" : "#1A1A1A", 0.16);
-  const openSection = sections.find((s) => s.fn === openFn) ?? null;
+  const activeSection =
+    sections.find((s) => s.fn === activeFn) ?? sections[0] ?? null;
 
   async function saveColor(hex: string) {
     setSavedColor(hex);
@@ -178,33 +189,9 @@ export function CompanyDashboardClient({
         />
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-5">
-        {/* Sections */}
-        <div className="lg:col-span-3">
-          <Card>
-            <div className="px-6 pt-5">
-              <h2 className="font-display text-xl text-ink">
-                Diagnostic sections
-              </h2>
-              <p className="mt-0.5 text-sm text-ink-muted">
-                Open a section to manage its transcripts and add new ones
-              </p>
-            </div>
-            <div className="grid gap-3 p-4 sm:grid-cols-2">
-              {sections.map((s) => (
-                <SectionCard
-                  key={s.fn}
-                  section={s}
-                  brand={brand}
-                  onOpen={() => setOpenFn(s.fn)}
-                />
-              ))}
-            </div>
-          </Card>
-        </div>
-
-        {/* Radar */}
-        <Card className="lg:col-span-2">
+      {/* Company-wide maturity radar */}
+      <section className="mb-8">
+        <Card>
           <div className="px-6 pt-5">
             <h2 className="font-display text-xl text-ink">Framework maturity</h2>
             <p className="mt-0.5 text-sm text-ink-muted">
@@ -215,10 +202,11 @@ export function CompanyDashboardClient({
             {aggregates.completedCount > 0 ? (
               <RadarScoreChart data={radarData} accent={brand} />
             ) : (
-              <div className="flex h-[300px] flex-col items-center justify-center text-center">
+              <div className="flex h-[280px] flex-col items-center justify-center text-center">
                 <p className="text-sm text-ink-muted">No scored sections yet.</p>
-                <p className="mt-1 max-w-[220px] text-xs text-ink-faint">
-                  Add a transcript to a section to populate the maturity radar.
+                <p className="mt-1 max-w-[260px] text-xs text-ink-faint">
+                  Open a section tab below and add a transcript to populate the
+                  maturity radar.
                 </p>
               </div>
             )}
@@ -226,90 +214,72 @@ export function CompanyDashboardClient({
         </Card>
       </section>
 
-      {openSection && (
-        <SectionTranscriptDialog
-          companyId={company.id}
-          fn={openSection.fn}
-          label={openSection.label}
-          agentName={openSection.agentName}
-          brand={brand}
-          transcripts={openSection.transcripts}
-          onClose={() => setOpenFn(null)}
-          onChanged={() => router.refresh()}
-        />
-      )}
-    </div>
-  );
-}
-
-function SectionCard({
-  section,
-  brand,
-  onOpen,
-}: {
-  section: SectionView;
-  brand: string;
-  onOpen: () => void;
-}) {
-  const count = section.transcripts.length;
-  const tone = section.avgScore != null ? scoreTone(section.avgScore) : null;
-
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="flex flex-col rounded-xl border border-line bg-surface p-4 text-left transition-shadow hover:shadow-card"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-sm font-semibold text-ink">{section.label}</div>
-          <div className="mt-0.5 text-xs text-ink-muted">
-            {section.agentName} · {section.agentTitle}
-          </div>
+      {/* Diagnostic sections as in-page tabs */}
+      <section>
+        <div className="mb-3">
+          <h2 className="font-display text-xl text-ink">Diagnostic sections</h2>
+          <p className="mt-0.5 text-sm text-ink-muted">
+            Select a function to manage its transcripts and review detail
+          </p>
         </div>
-        {section.avgScore != null ? (
-          <span
-            className={cn(
-              "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg font-display text-lg",
-              tone?.bg,
-              tone?.text,
-            )}
-          >
-            {section.avgScore}
-          </span>
-        ) : (
-          <span className="shrink-0 rounded-md bg-surface-muted px-2 py-1 text-[11px] font-medium text-ink-faint">
-            No data
-          </span>
+
+        {/* Tab strip */}
+        <div className="flex flex-wrap gap-2 border-b border-line">
+          {sections.map((s) => {
+            const active = s.fn === activeFn;
+            return (
+              <button
+                key={s.fn}
+                type="button"
+                onClick={() => setActiveFn(s.fn)}
+                className={cn(
+                  "group relative -mb-px flex items-center gap-2 rounded-t-lg px-4 py-2.5 text-sm font-medium transition-colors",
+                  active
+                    ? "text-ink"
+                    : "text-ink-muted hover:text-ink-soft",
+                )}
+              >
+                {s.label}
+                {s.avgScore != null ? (
+                  <span
+                    className={cn(
+                      "rounded px-1.5 py-0.5 text-[11px] font-semibold",
+                      scoreTone(s.avgScore).bg,
+                      scoreTone(s.avgScore).text,
+                    )}
+                  >
+                    {s.avgScore}
+                  </span>
+                ) : (
+                  s.transcripts.length > 0 && (
+                    <span className="rounded bg-surface-muted px-1.5 py-0.5 text-[11px] font-semibold text-ink-faint">
+                      {s.transcripts.length}
+                    </span>
+                  )
+                )}
+                {active && (
+                  <span
+                    className="absolute inset-x-0 -bottom-px h-0.5 rounded-full"
+                    style={{ background: brand }}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Active tab panel */}
+        {activeSection && (
+          <Card className="rounded-t-none border-t-0">
+            <SectionDetail
+              companyId={company.id}
+              section={activeSection}
+              brand={brand}
+              onChanged={() => router.refresh()}
+            />
+          </Card>
         )}
-      </div>
-
-      <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-ink-muted">
-        {section.blurb}
-      </p>
-
-      <div className="mt-3 flex items-center justify-between gap-2 border-t border-line pt-3">
-        <span className="inline-flex items-center gap-1.5 text-xs text-ink-muted">
-          <FileText className="h-3.5 w-3.5" />
-          {count === 0
-            ? "No transcripts"
-            : `${count} transcript${count === 1 ? "" : "s"}`}
-          {section.maturity && (
-            <>
-              <span className="text-ink-faint">·</span>
-              {MATURITY_LABEL[section.maturity as keyof typeof MATURITY_LABEL] ??
-                section.maturity}
-            </>
-          )}
-        </span>
-        <span
-          className="inline-flex items-center gap-1 text-xs font-semibold"
-          style={{ color: brand }}
-        >
-          <Plus className="h-3.5 w-3.5" />
-          {count === 0 ? "Add" : "Manage"}
-        </span>
-      </div>
-    </button>
+      </section>
+    </div>
   );
 }

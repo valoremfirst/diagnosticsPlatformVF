@@ -13,8 +13,10 @@ import { cn, formatDate, scoreTone } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default function ReportsPage() {
-  const reports = listSessions().filter((s) => s.status === "complete" && s.result);
+export default async function ReportsPage() {
+  const reports = (await listSessions()).filter(
+    (s) => s.status === "complete" && s.result,
+  );
 
   return (
     <div className="animate-fade-in">

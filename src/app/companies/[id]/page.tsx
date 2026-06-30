@@ -7,11 +7,15 @@ import { maturityFromScore } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default function CompanyPage({ params }: { params: { id: string } }) {
-  const company = getCompany(params.id);
+export default async function CompanyPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const company = await getCompany(params.id);
   if (!company) notFound();
 
-  const sessions = listSessionsByCompany(company.id);
+  const sessions = await listSessionsByCompany(company.id);
   const completed = sessions.filter((s) => s.status === "complete" && s.result);
 
   // One card per business function — each can hold many uploaded transcripts.
@@ -25,14 +29,30 @@ export default function CompanyPage({ params }: { params: { id: string } }) {
               ownCompleted.length,
           )
         : null;
+    // Per-section framework averages across this section's completed diagnostics.
+    const frameworks = FRAMEWORKS.map((fw) => {
+      const scores = ownCompleted
+        .map(
+          (s) =>
+            s.result?.frameworks.find((x) => x.framework === fw.name)?.score,
+        )
+        .filter((n): n is number => typeof n === "number");
+      const score = scores.length
+        ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+        : null;
+      return { name: fw.name, short: fw.short, score };
+    });
+
     return {
       fn: f.id,
       label: f.label,
       agentName: f.agentName,
       agentTitle: f.agentTitle,
       blurb: f.blurb,
+      probesFor: f.probesFor,
       avgScore: avg,
       maturity: avg != null ? maturityFromScore(avg) : null,
+      frameworks,
       transcripts: own.map((s) => ({
         sessionId: s.id,
         title: s.title ?? "Untitled transcript",

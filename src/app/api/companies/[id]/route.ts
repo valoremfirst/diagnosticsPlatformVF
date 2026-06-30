@@ -9,7 +9,7 @@ export async function GET(
   _req: Request,
   { params }: { params: { id: string } },
 ) {
-  const company = getCompany(params.id);
+  const company = await getCompany(params.id);
   if (!company) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
@@ -21,7 +21,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: { id: string } },
 ) {
-  const company = getCompany(params.id);
+  const company = await getCompany(params.id);
   if (!company) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
@@ -55,6 +55,6 @@ export async function PATCH(
     patch.tagline = String(body.tagline).trim();
   }
 
-  const updated = updateCompany(params.id, patch);
+  const updated = await updateCompany(params.id, patch);
   return NextResponse.json({ company: updated });
 }

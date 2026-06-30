@@ -14,7 +14,7 @@ const VALID_FUNCTIONS: DiagnosticFunction[] = [
 
 // GET /api/diagnostics — list all diagnostic sessions.
 export async function GET() {
-  return NextResponse.json({ sessions: listSessions() });
+  return NextResponse.json({ sessions: await listSessions() });
 }
 
 // POST /api/diagnostics — start a new diagnostic (status: draft).
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const session = createSession({
+  const session = await createSession({
     companyName,
     function: fn,
     status: "draft",

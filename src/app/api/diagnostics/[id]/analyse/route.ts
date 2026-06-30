@@ -9,7 +9,7 @@ export async function POST(
   _req: Request,
   { params }: { params: { id: string } },
 ) {
-  const session = getSession(params.id);
+  const session = await getSession(params.id);
   if (!session) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
@@ -25,10 +25,10 @@ export async function POST(
       session.transcript,
       session.function,
     );
-    const updated = setResult(params.id, result);
+    const updated = await setResult(params.id, result);
     return NextResponse.json({ session: updated, source });
   } catch (err) {
-    updateSession(params.id, { status: "failed" });
+    await updateSession(params.id, { status: "failed" });
     const message =
       err instanceof ResultValidationError
         ? `The analysis response was invalid: ${err.message}`

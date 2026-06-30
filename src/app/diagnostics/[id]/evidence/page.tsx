@@ -10,8 +10,12 @@ import { getSession } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-export default function EvidencePage({ params }: { params: { id: string } }) {
-  const session = getSession(params.id);
+export default async function EvidencePage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const session = await getSession(params.id);
   if (!session) notFound();
 
   const fn = functionById(session.function);

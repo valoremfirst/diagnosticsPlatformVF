@@ -3,8 +3,8 @@ import { listCompanies } from "@/lib/store";
 import { SidebarNav } from "./SidebarNav";
 import { TopBar } from "./TopBar";
 
-export function AppShell({ children }: { children: React.ReactNode }) {
-  const companies = listCompanies().map((c) => ({
+export async function AppShell({ children }: { children: React.ReactNode }) {
+  const companies = (await listCompanies()).map((c) => ({
     id: c.id,
     name: c.name,
     shortName: c.shortName,

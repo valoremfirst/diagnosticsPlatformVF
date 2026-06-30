@@ -11,11 +11,12 @@ import { cn, MATURITY_LABEL, maturityFromScore, scoreTone } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default function OverviewPage() {
-  const companies = listCompanies();
+export default async function OverviewPage() {
+  const companies = await listCompanies();
 
-  const companyStats = companies.map((c) => {
-    const sessions = listSessionsByCompany(c.id);
+  const companyStats = await Promise.all(
+    companies.map(async (c) => {
+    const sessions = await listSessionsByCompany(c.id);
     const completed = sessions.filter((s) => s.status === "complete" && s.result);
     const avgScore =
       completed.length > 0
@@ -34,7 +35,8 @@ export default function OverviewPage() {
       sectionsTotal: FUNCTIONS.length,
       risks,
     };
-  });
+  }),
+  );
 
   const portfolioCompleted = companyStats.reduce(
     (a, s) => a + s.completedCount,

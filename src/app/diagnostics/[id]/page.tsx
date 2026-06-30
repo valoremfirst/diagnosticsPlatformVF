@@ -20,8 +20,12 @@ import { cn, formatDate, MATURITY_LABEL, maturityFromScore, scoreTone } from "@/
 
 export const dynamic = "force-dynamic";
 
-export default function ResultsPage({ params }: { params: { id: string } }) {
-  const session = getSession(params.id);
+export default async function ResultsPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const session = await getSession(params.id);
   if (!session) notFound();
 
   const fn = functionById(session.function);

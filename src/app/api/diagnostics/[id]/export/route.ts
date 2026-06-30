@@ -8,7 +8,7 @@ export async function POST(
   _req: Request,
   { params }: { params: { id: string } },
 ) {
-  const session = getSession(params.id);
+  const session = await getSession(params.id);
   if (!session) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }

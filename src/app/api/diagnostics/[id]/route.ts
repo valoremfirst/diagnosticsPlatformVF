@@ -7,7 +7,7 @@ export async function GET(
   _req: Request,
   { params }: { params: { id: string } },
 ) {
-  const session = getSession(params.id);
+  const session = await getSession(params.id);
   if (!session) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
@@ -19,7 +19,7 @@ export async function DELETE(
   _req: Request,
   { params }: { params: { id: string } },
 ) {
-  const ok = deleteSession(params.id);
+  const ok = await deleteSession(params.id);
   if (!ok) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }

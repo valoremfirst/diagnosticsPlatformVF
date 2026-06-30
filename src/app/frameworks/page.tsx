@@ -8,8 +8,8 @@ import { cn, MATURITY_LABEL, maturityFromScore, scoreTone } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default function FrameworksPage() {
-  const completed = listSessions().filter((s) => s.result);
+export default async function FrameworksPage() {
+  const completed = (await listSessions()).filter((s) => s.result);
 
   function portfolioScore(name: string): number | null {
     const scores = completed

@@ -8,12 +8,12 @@ import { listSessions } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-export default function HistoryPage({
+export default async function HistoryPage({
   searchParams,
 }: {
   searchParams: { q?: string };
 }) {
-  const sessions = listSessions();
+  const sessions = await listSessions();
 
   return (
     <div className="animate-fade-in">

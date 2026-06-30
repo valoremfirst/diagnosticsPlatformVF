@@ -6,7 +6,7 @@ const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
 // GET /api/companies — list all companies.
 export async function GET() {
-  return NextResponse.json({ companies: listCompanies() });
+  return NextResponse.json({ companies: await listCompanies() });
 }
 
 // POST /api/companies — create a new company.
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const company = createCompany({
+  const company = await createCompany({
     name,
     brandColor,
     shortName: body.shortName ? String(body.shortName) : undefined,
