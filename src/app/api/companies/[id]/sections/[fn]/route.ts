@@ -60,7 +60,12 @@ export async function POST(
     );
   }
 
-  let body: { transcript?: unknown; title?: unknown; conversationId?: unknown };
+  let body: {
+    transcript?: unknown;
+    title?: unknown;
+    conversationId?: unknown;
+    analyse?: unknown;
+  };
   try {
     body = await req.json();
   } catch {
@@ -113,10 +118,15 @@ export async function POST(
       ? body.title.trim()
       : `Transcript ${new Date().toLocaleDateString("en-GB")}`;
 
+  // When `analyse` is explicitly false (e.g. bulk ElevenLabs imports), the
+  // transcript is saved as a draft and scoring is deferred until the user
+  // presses Analyse (POST /api/diagnostics/:id/analyse).
+  const shouldAnalyse = body.analyse !== false;
+
   const session = await createSectionSession(params.id, fn, {
     title,
     transcript,
-    status: "processing",
+    status: shouldAnalyse ? "processing" : "draft",
     selectedFrameworks: FRAMEWORKS.map((f) => f.name),
   });
 
@@ -125,6 +135,10 @@ export async function POST(
       { error: "Could not create the diagnostic." },
       { status: 500 },
     );
+  }
+
+  if (!shouldAnalyse) {
+    return NextResponse.json({ session, source: null });
   }
 
   try {

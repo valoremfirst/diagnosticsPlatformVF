@@ -264,6 +264,8 @@ export async function createCompany(
     brandColor: input.brandColor ?? "#1E4D5A",
     sector: input.sector?.trim() || undefined,
     tagline: input.tagline?.trim() || undefined,
+    profilePicture: input.profilePicture?.trim() || undefined,
+    description: input.description?.trim() || undefined,
     createdAt: input.createdAt ?? new Date().toISOString(),
   };
   return tryFs(

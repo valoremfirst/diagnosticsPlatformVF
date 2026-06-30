@@ -99,6 +99,10 @@ export interface Company {
   brandColor: string;
   sector?: string;
   tagline?: string;
+  /** URL to the company logo / profile picture. */
+  profilePicture?: string;
+  /** Longer description of the company shown on the dashboard hero. */
+  description?: string;
   createdAt: string;
 }
 

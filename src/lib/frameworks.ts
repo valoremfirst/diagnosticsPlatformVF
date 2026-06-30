@@ -151,7 +151,7 @@ export const FUNCTIONS: FunctionDefinition[] = [
   {
     id: "sales",
     label: "Sales",
-    agentName: "Mara",
+    agentName: "George",
     agentTitle: "Sales Operations Consultant",
     blurb:
       "Probes pipeline visibility, CRM usage, conversion and forecast accuracy.",

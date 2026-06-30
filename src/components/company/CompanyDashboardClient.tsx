@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2 } from "lucide-react";
+import { Building2, Check, Pencil, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, useState } from "react";
 
@@ -69,6 +69,12 @@ export function CompanyDashboardClient({
   const [activeFn, setActiveFn] = useState<DiagnosticFunction>(
     sections[0]?.fn ?? "finance",
   );
+  const [savedDescription, setSavedDescription] = useState(company.description ?? "");
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [descDraft, setDescDraft] = useState(company.description ?? "");
+  const [savedPicture, setSavedPicture] = useState(company.profilePicture ?? "");
+  const [editingPic, setEditingPic] = useState(false);
+  const [picDraft, setPicDraft] = useState(company.profilePicture ?? "");
 
   const brand = preview ?? savedColor;
   const ink = readableInk(brand);
@@ -83,6 +89,28 @@ export function CompanyDashboardClient({
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ brandColor: hex }),
+    });
+    router.refresh();
+  }
+
+  async function saveDescription() {
+    setSavedDescription(descDraft);
+    setEditingDesc(false);
+    await fetch(`/api/companies/${company.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description: descDraft }),
+    });
+    router.refresh();
+  }
+
+  async function savePicture() {
+    setSavedPicture(picDraft);
+    setEditingPic(false);
+    await fetch(`/api/companies/${company.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ profilePicture: picDraft }),
     });
     router.refresh();
   }
@@ -103,12 +131,44 @@ export function CompanyDashboardClient({
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div className="max-w-xl">
             <div className="flex items-center gap-3">
-              <div
-                className="flex h-12 w-12 items-center justify-center rounded-xl text-lg font-semibold"
-                style={{ background: overlay }}
-              >
-                {company.shortName}
-              </div>
+              {/* Logo / avatar */}
+              {savedPicture ? (
+                <div className="relative group/pic">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={savedPicture}
+                    alt={company.name}
+                    className="h-12 w-12 rounded-xl object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setPicDraft(savedPicture); setEditingPic(true); }}
+                    className="absolute inset-0 flex items-center justify-center rounded-xl opacity-0 group-hover/pic:opacity-100 transition-opacity"
+                    style={{ background: withAlpha("#000000", 0.4) }}
+                    title="Change logo"
+                  >
+                    <Pencil className="h-3.5 w-3.5 text-white" />
+                  </button>
+                </div>
+              ) : (
+                <div className="relative group/pic">
+                  <div
+                    className="flex h-12 w-12 items-center justify-center rounded-xl text-lg font-semibold"
+                    style={{ background: overlay }}
+                  >
+                    {company.shortName}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setPicDraft(""); setEditingPic(true); }}
+                    className="absolute inset-0 flex items-center justify-center rounded-xl opacity-0 group-hover/pic:opacity-100 transition-opacity"
+                    style={{ background: withAlpha("#000000", 0.4) }}
+                    title="Add logo"
+                  >
+                    <Pencil className="h-3.5 w-3.5 text-white" />
+                  </button>
+                </div>
+              )}
               <div
                 className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
                 style={{ background: overlay }}
@@ -117,6 +177,27 @@ export function CompanyDashboardClient({
                 {company.sector ?? "Company"}
               </div>
             </div>
+
+            {/* Logo URL edit popover */}
+            {editingPic && (
+              <div className="mt-3 flex items-center gap-2">
+                <input
+                  type="url"
+                  value={picDraft}
+                  onChange={(e) => setPicDraft(e.target.value)}
+                  placeholder="https://example.com/logo.png"
+                  autoFocus
+                  className="h-9 flex-1 rounded-lg border border-white/30 bg-white/10 px-3 text-sm text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/40"
+                />
+                <button type="button" onClick={savePicture} className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20 hover:bg-white/30 transition-colors" title="Save">
+                  <Check className="h-4 w-4 text-white" />
+                </button>
+                <button type="button" onClick={() => setEditingPic(false)} className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors" title="Cancel">
+                  <X className="h-4 w-4 text-white" />
+                </button>
+              </div>
+            )}
+
             <h1 className="mt-4 font-display text-4xl leading-tight">
               {company.name}
             </h1>
@@ -127,6 +208,56 @@ export function CompanyDashboardClient({
               >
                 {company.tagline}
               </p>
+            )}
+
+            {/* Description with inline edit */}
+            {editingDesc ? (
+              <div className="mt-3 space-y-2">
+                <textarea
+                  value={descDraft}
+                  onChange={(e) => setDescDraft(e.target.value)}
+                  rows={3}
+                  autoFocus
+                  className="w-full rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/40 resize-none"
+                  placeholder="Add a company description..."
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={saveDescription}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-white/20 px-3 text-xs font-medium text-white hover:bg-white/30 transition-colors"
+                  >
+                    <Check className="h-3.5 w-3.5" /> Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setDescDraft(savedDescription); setEditingDesc(false); }}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/20 transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" /> Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="group/desc mt-3 flex items-start gap-2">
+                {savedDescription ? (
+                  <p className="text-[14px] leading-relaxed" style={{ color: withAlpha(ink, 0.75) }}>
+                    {savedDescription}
+                  </p>
+                ) : (
+                  <p className="text-[14px] italic" style={{ color: withAlpha(ink, 0.45) }}>
+                    Add a company description...
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => { setDescDraft(savedDescription); setEditingDesc(true); }}
+                  className="mt-0.5 flex-shrink-0 rounded p-1 opacity-0 group-hover/desc:opacity-100 transition-opacity hover:bg-white/20"
+                  title="Edit description"
+                >
+                  <Pencil className="h-3.5 w-3.5" style={{ color: withAlpha(ink, 0.7) }} />
+                </button>
+              </div>
             )}
           </div>
 

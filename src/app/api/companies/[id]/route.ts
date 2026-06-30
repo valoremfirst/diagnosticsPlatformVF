@@ -54,6 +54,12 @@ export async function PATCH(
   if (body.tagline !== undefined) {
     patch.tagline = String(body.tagline).trim();
   }
+  if (body.profilePicture !== undefined) {
+    patch.profilePicture = String(body.profilePicture).trim();
+  }
+  if (body.description !== undefined) {
+    patch.description = String(body.description).trim();
+  }
 
   const updated = await updateCompany(params.id, patch);
   return NextResponse.json({ company: updated });

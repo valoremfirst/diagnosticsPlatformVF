@@ -40,6 +40,8 @@ export async function POST(req: Request) {
     shortName: body.shortName ? String(body.shortName) : undefined,
     sector: body.sector ? String(body.sector) : undefined,
     tagline: body.tagline ? String(body.tagline) : undefined,
+    profilePicture: body.profilePicture ? String(body.profilePicture) : undefined,
+    description: body.description ? String(body.description) : undefined,
   });
 
   return NextResponse.json({ company }, { status: 201 });

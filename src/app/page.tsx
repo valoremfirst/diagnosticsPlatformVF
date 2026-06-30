@@ -92,12 +92,21 @@ export default async function OverviewPage() {
                     background: `linear-gradient(135deg, ${shade(company.brandColor, -0.2)}, ${company.brandColor})`,
                   }}
                 >
-                  <div
-                    className="flex h-11 w-11 items-center justify-center rounded-xl text-sm font-bold text-white"
-                    style={{ background: withAlpha("#FFFFFF", 0.2) }}
-                  >
-                    {company.shortName}
-                  </div>
+                  {company.profilePicture ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={company.profilePicture}
+                      alt={company.name}
+                      className="h-11 w-11 rounded-xl object-cover"
+                    />
+                  ) : (
+                    <div
+                      className="flex h-11 w-11 items-center justify-center rounded-xl text-sm font-bold text-white"
+                      style={{ background: withAlpha("#FFFFFF", 0.2) }}
+                    >
+                      {company.shortName}
+                    </div>
+                  )}
                   <div className="min-w-0">
                     <div className="truncate font-display text-lg leading-tight text-white">
                       {company.name}

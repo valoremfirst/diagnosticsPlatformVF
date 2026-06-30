@@ -55,8 +55,54 @@ export function SectionDetail({
   const [stage, setStage] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [analysingId, setAnalysingId] = useState<string | null>(null);
+  const [analysingAll, setAnalysingAll] = useState(false);
   const stageTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const pending = transcripts.filter((t) => t.status !== "complete");
+
+  // Run Gemini scoring on an already-imported draft transcript.
+  async function analyseExisting(sessionId: string) {
+    setAnalysingId(sessionId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/diagnostics/${sessionId}/analyse`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Analysis failed.");
+      }
+      onChanged();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setAnalysingId(null);
+    }
+  }
+
+  async function analyseAllPending() {
+    setAnalysingAll(true);
+    setError(null);
+    for (const t of pending) {
+      setAnalysingId(t.sessionId);
+      try {
+        const res = await fetch(`/api/diagnostics/${t.sessionId}/analyse`, {
+          method: "POST",
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Analysis failed.");
+        }
+      } catch (e) {
+        setError((e as Error).message);
+      }
+    }
+    setAnalysingId(null);
+    setAnalysingAll(false);
+    onChanged();
+  }
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -160,6 +206,21 @@ export function SectionDetail({
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-ink">Transcripts</h3>
             <div className="flex items-center gap-2">
+              {pending.length > 0 && (
+                <button
+                  type="button"
+                  onClick={analyseAllPending}
+                  disabled={analysingAll}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-xs font-semibold text-ink-soft transition-colors hover:border-ink-faint disabled:opacity-60"
+                >
+                  {analysingAll ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" style={{ color: brand }} />
+                  )}
+                  Analyse all ({pending.length})
+                </button>
+              )}
               <ElevenLabsPull
                 companyId={companyId}
                 fn={fn}
@@ -317,7 +378,11 @@ export function SectionDetail({
                     </div>
                     <div className="mt-0.5 flex items-center gap-2 text-xs text-ink-muted">
                       <span className="capitalize">
-                        {t.status === "complete" ? "Scored" : t.status}
+                        {t.status === "complete"
+                          ? "Scored"
+                          : t.status === "draft"
+                            ? "Not analysed"
+                            : t.status}
                       </span>
                       <span className="text-ink-faint">·</span>
                       <span>{t.turns} turns</span>
@@ -325,7 +390,7 @@ export function SectionDetail({
                       <span>{formatDate(t.createdAt)}</span>
                     </div>
                   </div>
-                  {t.status === "complete" && (
+                  {t.status === "complete" ? (
                     <Link
                       href={`/diagnostics/${t.sessionId}`}
                       className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold hover:underline"
@@ -333,6 +398,26 @@ export function SectionDetail({
                     >
                       Results
                     </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => analyseExisting(t.sessionId)}
+                      disabled={analysingId === t.sessionId}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                      style={{ background: brand }}
+                    >
+                      {analysingId === t.sessionId ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Analysing…
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-3.5 w-3.5" />
+                          Analyse
+                        </>
+                      )}
+                    </button>
                   )}
                   <button
                     type="button"
@@ -436,7 +521,10 @@ function ElevenLabsPull({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [convos, setConvos] = useState<PulledConversation[] | null>(null);
-  const [importingId, setImportingId] = useState<string | null>(null);
+  const [importingAll, setImportingAll] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(
+    null,
+  );
 
   async function load() {
     setOpen((v) => !v);
@@ -457,30 +545,48 @@ function ElevenLabsPull({
     }
   }
 
-  async function importConvo(c: PulledConversation) {
-    setImportingId(c.conversationId);
-    try {
-      const res = await fetch(`/api/companies/${companyId}/sections/${fn}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          conversationId: c.conversationId,
-          title: c.title,
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Import failed.");
+  // Import every conversation as a draft transcript. Analysis is deferred —
+  // the user runs it later from the transcript list (analyse: false).
+  async function importAll() {
+    if (!convos || convos.length === 0) return;
+    setImportingAll(true);
+    setError(null);
+    const list = [...convos];
+    let done = 0;
+    setProgress({ done: 0, total: list.length });
+    const failed: PulledConversation[] = [];
+
+    for (const c of list) {
+      try {
+        const res = await fetch(`/api/companies/${companyId}/sections/${fn}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            conversationId: c.conversationId,
+            title: c.title,
+            analyse: false,
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Import failed.");
+        }
+        done += 1;
+        setProgress({ done, total: list.length });
+      } catch {
+        failed.push(c);
       }
-      setConvos((list) =>
-        (list ?? []).filter((x) => x.conversationId !== c.conversationId),
-      );
-      onImported();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setImportingId(null);
     }
+
+    setConvos(failed);
+    setImportingAll(false);
+    setProgress(null);
+    if (failed.length > 0) {
+      setError(`${failed.length} of ${list.length} could not be imported.`);
+    } else {
+      setOpen(false);
+    }
+    onImported();
   }
 
   return (
@@ -500,7 +606,8 @@ function ElevenLabsPull({
       {open && (
         <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-line bg-surface p-3 shadow-card-hover">
           <p className="mb-2 text-xs text-ink-muted">
-            Conversations over 15 min for the {fn} agent.
+            Conversations over 15 min for the {fn} agent. Imported as drafts —
+            analyse them when ready.
           </p>
           {loading && (
             <div className="flex items-center gap-2 py-4 text-sm text-ink-muted">
@@ -509,7 +616,7 @@ function ElevenLabsPull({
             </div>
           )}
           {error && (
-            <p className="rounded-lg bg-danger/10 px-3 py-2 text-xs text-danger">
+            <p className="mb-2 rounded-lg bg-danger/10 px-3 py-2 text-xs text-danger">
               {error}
             </p>
           )}
@@ -518,36 +625,46 @@ function ElevenLabsPull({
               No conversations over 15 minutes found.
             </p>
           )}
-          <div className="space-y-1.5">
-            {convos?.map((c) => (
-              <div
-                key={c.conversationId}
-                className="flex items-center gap-2 rounded-lg border border-line p-2"
+          {convos && convos.length > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={importAll}
+                disabled={importingAll}
+                className="mb-2 inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                style={{ background: brand }}
               >
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-xs font-medium text-ink">
-                    {c.title}
+                {importingAll ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Importing {progress?.done ?? 0}/{progress?.total ?? 0}…
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-3.5 w-3.5" />
+                    Import all ({convos.length})
+                  </>
+                )}
+              </button>
+              <div className="max-h-56 space-y-1.5 overflow-y-auto">
+                {convos.map((c) => (
+                  <div
+                    key={c.conversationId}
+                    className="flex items-center gap-2 rounded-lg border border-line p-2"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-xs font-medium text-ink">
+                        {c.title}
+                      </div>
+                      <div className="text-[11px] text-ink-muted">
+                        {Math.round(c.durationSeconds / 60)} min · {c.turns} turns
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-[11px] text-ink-muted">
-                    {Math.round(c.durationSeconds / 60)} min · {c.turns} turns
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => importConvo(c)}
-                  disabled={importingId === c.conversationId}
-                  className="shrink-0 rounded-md px-2 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
-                  style={{ background: brand }}
-                >
-                  {importingId === c.conversationId ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    "Import"
-                  )}
-                </button>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          )}
         </div>
       )}
     </div>

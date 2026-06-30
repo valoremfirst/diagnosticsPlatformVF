@@ -13,6 +13,8 @@ export function AddCompanyButton() {
   const [name, setName] = useState("");
   const [sector, setSector] = useState("");
   const [tagline, setTagline] = useState("");
+  const [description, setDescription] = useState("");
+  const [profilePicture, setProfilePicture] = useState("");
   const [brandColor, setBrandColor] = useState(BRAND_SWATCHES[0]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,6 +23,8 @@ export function AddCompanyButton() {
     setName("");
     setSector("");
     setTagline("");
+    setDescription("");
+    setProfilePicture("");
     setBrandColor(BRAND_SWATCHES[0]);
     setError(null);
   }
@@ -40,6 +44,8 @@ export function AddCompanyButton() {
           name: name.trim(),
           sector: sector.trim() || undefined,
           tagline: tagline.trim() || undefined,
+          description: description.trim() || undefined,
+          profilePicture: profilePicture.trim() || undefined,
           brandColor,
         }),
       });
@@ -117,6 +123,23 @@ export function AddCompanyButton() {
                   value={tagline}
                   onChange={(e) => setTagline(e.target.value)}
                   placeholder="Optional one-liner"
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="Description">
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Brief overview of the company..."
+                  rows={3}
+                  className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-tint resize-none"
+                />
+              </Field>
+              <Field label="Logo URL">
+                <input
+                  value={profilePicture}
+                  onChange={(e) => setProfilePicture(e.target.value)}
+                  placeholder="https://example.com/logo.png"
                   className={inputClass}
                 />
               </Field>
