@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { type CSSProperties, useState } from "react";
 
 import { BrandColorPicker } from "@/components/company/BrandColorPicker";
+import { CompanyChat } from "@/components/company/CompanyChat";
 import { SectionDetail } from "@/components/company/SectionDetail";
+import { ShareButton } from "@/components/company/ShareButton";
 import { MetricCard } from "@/components/MetricCard";
 import { RadarScoreChart, type RadarDatum } from "@/components/RadarScoreChart";
 import { Card } from "@/components/ui/Card";
@@ -15,7 +17,7 @@ import type {
   DiagnosticFunction,
   DiagnosticStatus,
 } from "@/lib/types";
-import { cn, scoreTone } from "@/lib/utils";
+import { cn, MATURITY_LABEL, maturityFromScore, scoreTone } from "@/lib/utils";
 
 export interface SectionTranscript {
   sessionId: string;
@@ -42,6 +44,7 @@ export interface SectionView {
   avgScore: number | null;
   maturity: string | null;
   frameworks: SectionFrameworkScore[];
+  importedConversationIds: string[];
   transcripts: SectionTranscript[];
 }
 
@@ -262,11 +265,14 @@ export function CompanyDashboardClient({
           </div>
 
           <div className="flex flex-col items-end gap-4">
-            <BrandColorPicker
-              value={savedColor}
-              onPreview={(hex) => setPreview(hex)}
-              onSave={saveColor}
-            />
+            <div className="flex items-center gap-2">
+              <ShareButton companyId={company.id} ink={ink} />
+              <BrandColorPicker
+                value={savedColor}
+                onPreview={(hex) => setPreview(hex)}
+                onSave={saveColor}
+              />
+            </div>
             <div
               className="rounded-2xl p-5 text-right"
               style={{ background: withAlpha(ink === "#FFFFFF" ? "#FFFFFF" : "#1A1A1A", 0.12) }}
@@ -320,6 +326,69 @@ export function CompanyDashboardClient({
         />
       </section>
 
+      {/* Main diagnostic — averaged scores across every analysed transcript */}
+      <section className="mb-8">
+        <Card>
+          <div className="flex flex-wrap items-end justify-between gap-4 px-6 pt-5">
+            <div>
+              <h2 className="font-display text-xl text-ink">Main diagnostic</h2>
+              <p className="mt-0.5 text-sm text-ink-muted">
+                Average across all analysed transcripts · per agent and overall
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <div className="font-display text-3xl leading-none text-ink">
+                  {aggregates.avgScore}
+                  <span className="text-lg text-ink-faint">/100</span>
+                </div>
+                <div className="mt-0.5 text-xs font-medium text-ink-muted">
+                  {aggregates.completedCount > 0
+                    ? `${MATURITY_LABEL[maturityFromScore(aggregates.avgScore)]} · whole company`
+                    : "No analysed reports yet"}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="grid gap-3 px-6 py-5 sm:grid-cols-2 lg:grid-cols-3">
+            {sections.map((s) => {
+              const tone = s.avgScore != null ? scoreTone(s.avgScore) : null;
+              const count = s.transcripts.filter(
+                (t) => t.status === "complete",
+              ).length;
+              return (
+                <button
+                  key={s.fn}
+                  type="button"
+                  onClick={() => setActiveFn(s.fn)}
+                  className="flex items-center gap-3 rounded-xl border border-line bg-surface p-3.5 text-left transition-shadow hover:shadow-card"
+                >
+                  <span
+                    className={cn(
+                      "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl font-display text-lg",
+                      tone ? tone.bg : "bg-surface-muted",
+                      tone ? tone.text : "text-ink-faint",
+                    )}
+                  >
+                    {s.avgScore != null ? s.avgScore : "—"}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold text-ink">
+                      {s.label}
+                    </div>
+                    <div className="truncate text-xs text-ink-muted">
+                      {s.avgScore != null && s.maturity
+                        ? `${MATURITY_LABEL[s.maturity as keyof typeof MATURITY_LABEL] ?? s.maturity} · ${count} report${count === 1 ? "" : "s"}`
+                        : "Not analysed"}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+      </section>
+
       {/* Company-wide maturity radar */}
       <section className="mb-8">
         <Card>
@@ -342,6 +411,13 @@ export function CompanyDashboardClient({
               </div>
             )}
           </div>
+        </Card>
+      </section>
+
+      {/* Ask the diagnostics — grounded AI Q&A */}
+      <section className="mb-8">
+        <Card>
+          <CompanyChat companyId={company.id} brand={brand} />
         </Card>
       </section>
 
@@ -403,6 +479,7 @@ export function CompanyDashboardClient({
         {activeSection && (
           <Card className="rounded-t-none border-t-0">
             <SectionDetail
+              key={activeSection.fn}
               companyId={company.id}
               section={activeSection}
               brand={brand}

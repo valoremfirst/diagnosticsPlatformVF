@@ -12,6 +12,18 @@ export function geminiEnabled(): boolean {
   return Boolean(process.env.GEMINI_API_KEY);
 }
 
+/** Send a freeform prompt to Gemini and return the plain-text response. */
+export async function askGemini(prompt: string): Promise<string> {
+  const { GoogleGenerativeAI } = await import("@google/generative-ai");
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
+  const model = genAI.getGenerativeModel({
+    model: process.env.GEMINI_MODEL || "gemini-1.5-pro",
+    generationConfig: { temperature: 0.3 },
+  });
+  const res = await model.generateContent(prompt);
+  return res.response.text();
+}
+
 const SCHEMA_BLOCK = `{
   "overallScore": number,
   "overallMaturityLevel": "low | developing | established | advanced | leading",

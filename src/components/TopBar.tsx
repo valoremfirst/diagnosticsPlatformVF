@@ -4,7 +4,7 @@ import { Bell, Settings } from "lucide-react";
 
 export function TopBar() {
   return (
-    <header className="sticky top-0 z-20 flex h-[72px] items-center justify-end gap-4 border-b border-line bg-canvas/85 px-6 backdrop-blur lg:px-8">
+    <header className="sticky top-0 z-20 flex h-[72px] items-center justify-end gap-4 border-b border-line bg-canvas/85 px-6 backdrop-blur lg:px-8 print:hidden">
       <div className="ml-auto flex items-center gap-2">
         <button
           aria-label="Notifications"

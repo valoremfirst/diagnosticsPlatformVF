@@ -139,6 +139,7 @@ export async function createSession(
     companyName: input.companyName,
     function: input.function,
     title: input.title,
+    sourceConversationId: input.sourceConversationId,
     status: input.status ?? "draft",
     clientContact: input.clientContact,
     sector: input.sector,
@@ -224,6 +225,15 @@ export async function getCompany(id: string): Promise<Company | undefined> {
   );
 }
 
+/** Find a company by its public share token (used by the read-only share page). */
+export async function getCompanyByShareToken(
+  token: string,
+): Promise<Company | undefined> {
+  if (!token) return undefined;
+  const all = await listCompanies();
+  return all.find((c) => c.shareToken === token);
+}
+
 function slugify(name: string): string {
   return (
     name
@@ -266,6 +276,7 @@ export async function createCompany(
     tagline: input.tagline?.trim() || undefined,
     profilePicture: input.profilePicture?.trim() || undefined,
     description: input.description?.trim() || undefined,
+    agentIds: input.agentIds,
     createdAt: input.createdAt ?? new Date().toISOString(),
   };
   return tryFs(

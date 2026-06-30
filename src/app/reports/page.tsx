@@ -30,10 +30,10 @@ export default async function ReportsPage() {
         <EmptyState
           icon={FileText}
           title="No reports yet"
-          description="Completed diagnostics will appear here as shareable reports."
+          description="Import and analyse a transcript in any company section — completed diagnostics will appear here as shareable reports."
           action={
-            <Link href="/new">
-              <Button>Start a diagnostic</Button>
+            <Link href="/">
+              <Button>Go to companies</Button>
             </Link>
           }
         />

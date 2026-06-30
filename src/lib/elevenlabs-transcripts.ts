@@ -96,11 +96,13 @@ function stamp(totalSeconds: number): string {
 export async function listLongConversations(
   fn: DiagnosticFunction,
   minMinutes: number = DEFAULT_MIN_MINUTES,
+  agentIdOverride?: string,
 ): Promise<ConversationSummary[]> {
-  const agentId = getServerAgentId(fn);
+  // Per-company agent id wins; fall back to the env default for the function.
+  const agentId = agentIdOverride?.trim() || getServerAgentId(fn);
   if (!agentId) {
     throw new ElevenLabsError(
-      `No ElevenLabs agent id configured for "${fn}". Set ELEVENLABS_AGENT_ID_${fn.toUpperCase()}.`,
+      `No ElevenLabs agent id configured for "${fn}". Set it on the company in the Admin console, or set ELEVENLABS_AGENT_ID_${fn.toUpperCase()}.`,
     );
   }
 
@@ -123,17 +125,23 @@ export async function listLongConversations(
     }>(`/convai/conversations?${params.toString()}`);
 
     for (const c of data.conversations ?? []) {
+      // Only import completed conversations.
+      if (c.status && c.status !== "done") continue;
       const duration = c.call_duration_secs ?? 0;
-      if (duration < minSeconds) continue;
+      if (minSeconds > 0 && duration < minSeconds) continue;
+      const date = c.start_time_unix_secs
+        ? new Date(c.start_time_unix_secs * 1000)
+        : null;
+      const dateStr = date
+        ? date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+        : null;
       collected.push({
         conversationId: c.conversation_id,
-        title:
-          c.agent_name?.trim() ||
-          `Conversation ${c.conversation_id.slice(0, 8)}`,
+        title: dateStr
+          ? `${c.agent_name?.trim() || fn} · ${dateStr}`
+          : c.agent_name?.trim() || `Conversation ${c.conversation_id.slice(0, 8)}`,
         durationSeconds: duration,
-        startedAt: c.start_time_unix_secs
-          ? new Date(c.start_time_unix_secs * 1000).toISOString()
-          : null,
+        startedAt: date ? date.toISOString() : null,
         turns: c.message_count ?? 0,
       });
     }

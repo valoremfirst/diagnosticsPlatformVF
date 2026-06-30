@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ChevronDown,
   FileText,
   Loader2,
   Plus,
@@ -12,12 +11,11 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { SectionView } from "@/components/company/CompanyDashboardClient";
 import { Card } from "@/components/ui/Card";
 import { withAlpha } from "@/lib/color";
-import type { DiagnosticFunction } from "@/lib/types";
 import { cn, formatDate, MATURITY_LABEL, scoreTone } from "@/lib/utils";
 
 const STAGES = [
@@ -57,10 +55,66 @@ export function SectionDetail({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [analysingId, setAnalysingId] = useState<string | null>(null);
   const [analysingAll, setAnalysingAll] = useState(false);
+  const [syncState, setSyncState] = useState<"idle" | "syncing" | "error">(
+    "idle",
+  );
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const stageTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const autoRan = useRef(false);
 
   const pending = transcripts.filter((t) => t.status !== "complete");
+
+  // Auto-import: on entering a section, pull every qualifying ElevenLabs
+  // conversation (>15 min) that isn't already imported and save it as a draft.
+  // No manual import step — analysis stays manual.
+  useEffect(() => {
+    if (autoRan.current) return;
+    autoRan.current = true;
+
+    // No cleanup / cancellation — React 18 setState on unmounted is a safe no-op.
+    // The autoRan guard prevents re-runs from Strict Mode's double-invoke.
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/elevenlabs/transcripts?fn=${fn}&companyId=${companyId}&minMinutes=15`,
+        );
+        if (!res.ok) {
+          setSyncState("error");
+          setSyncMessage("Could not reach ElevenLabs.");
+          return;
+        }
+        const data = await res.json();
+        const convos: PulledConversation[] = data.conversations ?? [];
+        const existing = new Set(section.importedConversationIds);
+        const missing = convos.filter((c) => !existing.has(c.conversationId));
+        if (missing.length === 0) return;
+
+        setSyncState("syncing");
+        setSyncMessage(`Importing ${missing.length} transcript${missing.length === 1 ? "" : "s"}…`);
+        let imported = 0;
+        for (const c of missing) {
+          const r = await fetch(`/api/companies/${companyId}/sections/${fn}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              conversationId: c.conversationId,
+              title: c.title,
+              analyse: false,
+            }),
+          });
+          if (r.ok) imported += 1;
+        }
+        setSyncState("idle");
+        setSyncMessage(null);
+        if (imported > 0) onChanged();
+      } catch {
+        setSyncState("error");
+        setSyncMessage("Could not sync from ElevenLabs.");
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fn]);
 
   // Run Gemini scoring on an already-imported draft transcript.
   async function analyseExisting(sessionId: string) {
@@ -221,12 +275,26 @@ export function SectionDetail({
                   Analyse all ({pending.length})
                 </button>
               )}
-              <ElevenLabsPull
-                companyId={companyId}
-                fn={fn}
-                brand={brand}
-                onImported={onChanged}
-              />
+              <span
+                className={cn(
+                  "inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium",
+                  syncState === "error"
+                    ? "border-danger/30 bg-danger/10 text-danger"
+                    : "border-line bg-surface text-ink-soft",
+                )}
+                title="Transcripts over 15 minutes import automatically from ElevenLabs"
+              >
+                {syncState === "syncing" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" style={{ color: brand }} />
+                ) : (
+                  <RadioTower className="h-3.5 w-3.5" style={{ color: brand }} />
+                )}
+                {syncState === "syncing"
+                  ? (syncMessage ?? "Syncing…")
+                  : syncState === "error"
+                    ? "Sync failed"
+                    : "Auto-synced"}
+              </span>
               {!adding && (
                 <button
                   type="button"
@@ -496,177 +564,6 @@ export function SectionDetail({
           </Card>
         </div>
       </div>
-    </div>
-  );
-}
-
-/**
- * Foundation control for the ElevenLabs auto-pull. Fetches conversations for
- * this section's agent that run longer than the configured minimum (default 15
- * minutes), then lets the user import one as a transcript. When ElevenLabs is
- * not configured the API returns a clear message surfaced here.
- */
-function ElevenLabsPull({
-  companyId,
-  fn,
-  brand,
-  onImported,
-}: {
-  companyId: string;
-  fn: DiagnosticFunction;
-  brand: string;
-  onImported: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [convos, setConvos] = useState<PulledConversation[] | null>(null);
-  const [importingAll, setImportingAll] = useState(false);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(
-    null,
-  );
-
-  async function load() {
-    setOpen((v) => !v);
-    if (convos || loading) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(
-        `/api/elevenlabs/transcripts?fn=${fn}&minMinutes=15`,
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Could not reach ElevenLabs.");
-      setConvos(data.conversations ?? []);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Import every conversation as a draft transcript. Analysis is deferred —
-  // the user runs it later from the transcript list (analyse: false).
-  async function importAll() {
-    if (!convos || convos.length === 0) return;
-    setImportingAll(true);
-    setError(null);
-    const list = [...convos];
-    let done = 0;
-    setProgress({ done: 0, total: list.length });
-    const failed: PulledConversation[] = [];
-
-    for (const c of list) {
-      try {
-        const res = await fetch(`/api/companies/${companyId}/sections/${fn}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            conversationId: c.conversationId,
-            title: c.title,
-            analyse: false,
-          }),
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || "Import failed.");
-        }
-        done += 1;
-        setProgress({ done, total: list.length });
-      } catch {
-        failed.push(c);
-      }
-    }
-
-    setConvos(failed);
-    setImportingAll(false);
-    setProgress(null);
-    if (failed.length > 0) {
-      setError(`${failed.length} of ${list.length} could not be imported.`);
-    } else {
-      setOpen(false);
-    }
-    onImported();
-  }
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={load}
-        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-xs font-semibold text-ink-soft transition-colors hover:border-ink-faint"
-      >
-        <RadioTower className="h-3.5 w-3.5" style={{ color: brand }} />
-        ElevenLabs
-        <ChevronDown
-          className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")}
-        />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-line bg-surface p-3 shadow-card-hover">
-          <p className="mb-2 text-xs text-ink-muted">
-            Conversations over 15 min for the {fn} agent. Imported as drafts —
-            analyse them when ready.
-          </p>
-          {loading && (
-            <div className="flex items-center gap-2 py-4 text-sm text-ink-muted">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Fetching from ElevenLabs…
-            </div>
-          )}
-          {error && (
-            <p className="mb-2 rounded-lg bg-danger/10 px-3 py-2 text-xs text-danger">
-              {error}
-            </p>
-          )}
-          {convos && convos.length === 0 && !error && (
-            <p className="py-3 text-center text-xs text-ink-muted">
-              No conversations over 15 minutes found.
-            </p>
-          )}
-          {convos && convos.length > 0 && (
-            <>
-              <button
-                type="button"
-                onClick={importAll}
-                disabled={importingAll}
-                className="mb-2 inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-                style={{ background: brand }}
-              >
-                {importingAll ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Importing {progress?.done ?? 0}/{progress?.total ?? 0}…
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-3.5 w-3.5" />
-                    Import all ({convos.length})
-                  </>
-                )}
-              </button>
-              <div className="max-h-56 space-y-1.5 overflow-y-auto">
-                {convos.map((c) => (
-                  <div
-                    key={c.conversationId}
-                    className="flex items-center gap-2 rounded-lg border border-line p-2"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-xs font-medium text-ink">
-                        {c.title}
-                      </div>
-                      <div className="text-[11px] text-ink-muted">
-                        {Math.round(c.durationSeconds / 60)} min · {c.turns} turns
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      )}
     </div>
   );
 }

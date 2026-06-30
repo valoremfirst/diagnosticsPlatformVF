@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutGrid } from "lucide-react";
+import { History, LayoutGrid, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -11,17 +11,20 @@ interface CompanyNav {
   name: string;
   shortName: string;
   brandColor: string;
+  profilePicture?: string;
 }
 
 const NAV = [
   { href: "/", label: "Overview", icon: LayoutGrid, match: (p: string) => p === "/" },
+  { href: "/history", label: "History", icon: History, match: (p: string) => p.startsWith("/history") },
+  { href: "/admin", label: "Admin", icon: Settings2, match: (p: string) => p.startsWith("/admin") },
 ];
 
 export function SidebarNav({ companies }: { companies: CompanyNav[] }) {
   const pathname = usePathname() || "/";
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-line bg-surface px-5 py-6 lg:flex">
+    <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-line bg-surface px-5 py-6 lg:flex print:hidden">
       <Link href="/" className="block px-2">
         <div className="font-display text-2xl leading-tight text-teal">
           Agentic
@@ -82,12 +85,21 @@ export function SidebarNav({ companies }: { companies: CompanyNav[] }) {
                     style={{ background: c.brandColor }}
                   />
                 )}
-                <span
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold text-white"
-                  style={{ background: c.brandColor }}
-                >
-                  {c.shortName}
-                </span>
+                {c.profilePicture ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={c.profilePicture}
+                    alt={c.name}
+                    className="h-6 w-6 shrink-0 rounded-md object-cover"
+                  />
+                ) : (
+                  <span
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold text-white"
+                    style={{ background: c.brandColor }}
+                  >
+                    {c.shortName}
+                  </span>
+                )}
                 {c.name}
               </Link>
             );

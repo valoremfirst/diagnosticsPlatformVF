@@ -77,11 +77,23 @@ export async function POST(
   //  - transcript (string): raw pasted/uploaded text
   //  - transcript (array): pre-structured turns
   let transcript: TranscriptTurn[];
+  let sourceConversationId: string | undefined;
   if (typeof body.conversationId === "string" && body.conversationId.trim()) {
+    sourceConversationId = body.conversationId.trim();
+
+    // Idempotency: if this ElevenLabs conversation has already been imported
+    // into this section, return the existing session instead of creating a
+    // duplicate. This makes the auto-sync safe to run on every page visit.
+    const existing = await listSectionSessions(params.id, fn);
+    const already = existing.find(
+      (s) => s.sourceConversationId === sourceConversationId,
+    );
+    if (already) {
+      return NextResponse.json({ session: already, source: null, deduped: true });
+    }
+
     try {
-      const pulled = await fetchConversationTranscript(
-        body.conversationId.trim(),
-      );
+      const pulled = await fetchConversationTranscript(sourceConversationId);
       transcript = pulled.turns;
     } catch (err) {
       const message =
@@ -123,9 +135,19 @@ export async function POST(
   // presses Analyse (POST /api/diagnostics/:id/analyse).
   const shouldAnalyse = body.analyse !== false;
 
+  // When importing from ElevenLabs, derive a deterministic session id from the
+  // conversation so that concurrent/repeated imports of the same conversation
+  // collapse onto one document instead of creating duplicates (the store keys
+  // by id, so a re-create overwrites rather than appends).
+  const deterministicId = sourceConversationId
+    ? `imp-${params.id}-${sourceConversationId}`
+    : undefined;
+
   const session = await createSectionSession(params.id, fn, {
+    id: deterministicId,
     title,
     transcript,
+    sourceConversationId,
     status: shouldAnalyse ? "processing" : "draft",
     selectedFrameworks: FRAMEWORKS.map((f) => f.name),
   });

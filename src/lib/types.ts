@@ -103,6 +103,13 @@ export interface Company {
   profilePicture?: string;
   /** Longer description of the company shown on the dashboard hero. */
   description?: string;
+  /**
+   * Per-function ElevenLabs agent ids. Each company runs its own agents, so
+   * auto-import resolves the agent id from here (falling back to env defaults).
+   */
+  agentIds?: Partial<Record<DiagnosticFunction, string>>;
+  /** Random token enabling a public, read-only share link for this company. */
+  shareToken?: string;
   createdAt: string;
 }
 
@@ -114,6 +121,8 @@ export interface DiagnosticSession {
   function: DiagnosticFunction;
   /** Optional label for the uploaded transcript, e.g. "CFO interview". */
   title?: string;
+  /** Source ElevenLabs conversation id, set when auto-imported (dedup key). */
+  sourceConversationId?: string;
   status: DiagnosticStatus;
   // Optional contextual metadata captured at creation.
   clientContact?: string;

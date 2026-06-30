@@ -1,8 +1,18 @@
 import { NextResponse } from "next/server";
 
 import { getCompany, updateCompany } from "@/lib/store";
+import type { Company, DiagnosticFunction } from "@/lib/types";
 
 const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+const VALID_FUNCTIONS: DiagnosticFunction[] = [
+  "finance",
+  "hr",
+  "sales",
+  "operations",
+  "it",
+  "leadership",
+];
 
 // GET /api/companies/:id — fetch a single company.
 export async function GET(
@@ -33,7 +43,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const patch: Record<string, string> = {};
+  const patch: Partial<Company> = {};
 
   if (body.brandColor !== undefined) {
     const brandColor = String(body.brandColor);
@@ -59,6 +69,16 @@ export async function PATCH(
   }
   if (body.description !== undefined) {
     patch.description = String(body.description).trim();
+  }
+  if (body.agentIds !== undefined && typeof body.agentIds === "object") {
+    // Keep only valid function keys with non-empty string ids.
+    const raw = body.agentIds as Record<string, unknown>;
+    const cleaned: Partial<Record<DiagnosticFunction, string>> = {};
+    for (const fn of VALID_FUNCTIONS) {
+      const v = raw[fn];
+      if (typeof v === "string" && v.trim()) cleaned[fn] = v.trim();
+    }
+    patch.agentIds = cleaned;
   }
 
   const updated = await updateCompany(params.id, patch);

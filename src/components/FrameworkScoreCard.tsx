@@ -3,7 +3,7 @@
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 
-import { EvidenceQuote } from "@/components/EvidenceQuote";
+import { EvidenceList } from "@/components/EvidenceList";
 import { Card } from "@/components/ui/Card";
 import type { FrameworkAssessment } from "@/lib/types";
 import { cn, maturityFromScore, MATURITY_LABEL, scoreTone } from "@/lib/utils";
@@ -89,13 +89,7 @@ export function FrameworkScoreCard({
                       <ConfidencePill value={c.confidence} />
                     </div>
                   </div>
-                  {c.evidence.length > 0 && (
-                    <div className="mt-3 grid gap-2">
-                      {c.evidence.map((e, i) => (
-                        <EvidenceQuote key={i} evidence={e} onJump={onJump} />
-                      ))}
-                    </div>
-                  )}
+                  <EvidenceList evidence={c.evidence} onJump={onJump} />
                 </div>
               );
             })}

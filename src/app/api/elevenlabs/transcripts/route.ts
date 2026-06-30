@@ -5,6 +5,7 @@ import {
   elevenLabsApiConfigured,
   listLongConversations,
 } from "@/lib/elevenlabs-transcripts";
+import { getCompany } from "@/lib/store";
 import type { DiagnosticFunction } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,7 @@ const VALID_FUNCTIONS: DiagnosticFunction[] = [
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const fn = searchParams.get("fn") as DiagnosticFunction | null;
+  const companyId = searchParams.get("companyId");
   const minMinutes = Number(searchParams.get("minMinutes") ?? "15");
 
   if (!fn || !VALID_FUNCTIONS.includes(fn)) {
@@ -42,10 +44,18 @@ export async function GET(req: Request) {
     );
   }
 
+  // Resolve the company's per-function agent id when a companyId is supplied.
+  let agentIdOverride: string | undefined;
+  if (companyId) {
+    const company = await getCompany(companyId);
+    agentIdOverride = company?.agentIds?.[fn];
+  }
+
   try {
     const conversations = await listLongConversations(
       fn,
       Number.isFinite(minMinutes) ? minMinutes : 15,
+      agentIdOverride,
     );
     return NextResponse.json({ conversations });
   } catch (err) {
