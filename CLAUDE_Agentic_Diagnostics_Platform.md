@@ -14,7 +14,7 @@ The platform should:
 Before building the frontend, inspect the project `Mocks` folder/file.
 
 **Base the frontend visual direction on the Oracle mock in the `Mocks` file.**
-
+TEST
 Use it as the reference for:
 - Overall layout
 - Navigation structure
