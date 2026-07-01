@@ -1,13 +1,14 @@
 "use client";
 
 import {
-  Banknote,
   BriefcaseBusiness,
   Check,
-  Cog,
   Compass,
+  HeartHandshake,
+  Presentation,
+  Scale,
   ServerCog,
-  Users,
+  Truck,
 } from "lucide-react";
 
 import { FUNCTIONS } from "@/lib/frameworks";
@@ -15,12 +16,13 @@ import type { DiagnosticFunction } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<DiagnosticFunction, React.ElementType> = {
-  finance: Banknote,
-  hr: Users,
-  sales: BriefcaseBusiness,
-  operations: Cog,
+  legal: Scale,
   it: ServerCog,
+  "operational-delivery": Truck,
+  sales: BriefcaseBusiness,
   leadership: Compass,
+  culture: HeartHandshake,
+  presales: Presentation,
 };
 
 export function AgentSelector({

@@ -8,12 +8,14 @@ import type { DiagnosticFunction } from "./types";
  */
 
 const PUBLIC_AGENT_ENV: Record<DiagnosticFunction, string | undefined> = {
-  finance: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID_FINANCE,
-  hr: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID_HR,
-  sales: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID_SALES,
+  legal: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID_LEGAL,
   it: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID_IT,
-  operations: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID_OPERATIONS,
+  "operational-delivery":
+    process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID_OPERATIONAL_DELIVERY,
+  sales: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID_SALES,
   leadership: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID_LEADERSHIP,
+  culture: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID_CULTURE,
+  presales: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID_PRESALES,
 };
 
 export function getPublicAgentId(fn: DiagnosticFunction): string | undefined {

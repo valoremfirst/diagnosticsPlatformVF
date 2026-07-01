@@ -8,28 +8,17 @@ import type { DiagnosticFunction, TranscriptTurn } from "./types";
 
 type Line = { speaker: "agent" | "user"; text: string };
 
-const FINANCE: Line[] = [
-  { speaker: "agent", text: "Thanks for the time. How clear is your real-time visibility over revenue across the group right now?" },
-  { speaker: "user", text: "Honestly patchy. We close around working day eight, so leadership steers on numbers that are three to four weeks old." },
-  { speaker: "agent", text: "Is the month-end consolidation manual?" },
-  { speaker: "user", text: "Very. We pull three ledgers into a master spreadsheet by hand, and one analyst owns it — if she's away, close slips." },
-  { speaker: "agent", text: "Do budget holders see spend against budget in-month, or only after close?" },
-  { speaker: "user", text: "Only after close, via a monthly PDF. Overspend is usually found after the fact — we've had a few nasty surprises." },
-  { speaker: "agent", text: "How confident are you in the thirteen-week cash forecast?" },
-  { speaker: "user", text: "It's a static model refreshed monthly, so it drifts. Accuracy is maybe sixty percent by week three." },
-  { speaker: "agent", text: "When you invest, do you track whether the benefits actually land?" },
-  { speaker: "user", text: "No — benefits realisation isn't tracked. Once a business case is approved, nobody revisits it." },
-];
-
-const HR: Line[] = [
-  { speaker: "agent", text: "Let's start with retention — what's voluntary turnover over the last year?" },
-  { speaker: "user", text: "High. Around twenty-four percent overall, closer to thirty-five on the frontline. We're constantly rehiring." },
-  { speaker: "agent", text: "Do you have structured exit data to understand why?" },
-  { speaker: "user", text: "We run exit interviews but the notes just sit in a folder. Nobody themes them or reports trends." },
-  { speaker: "agent", text: "How much of the HR team's time goes on manual admin?" },
-  { speaker: "user", text: "Too much — maybe sixty percent chasing paper. Holidays are on email and the HRIS we bought is barely adopted." },
-  { speaker: "agent", text: "How confident are you on compliance — would you pass an audit tomorrow?" },
-  { speaker: "user", text: "Nervous. Training records are in spreadsheets with no expiry alerts. We'd probably find gaps." },
+const LEGAL: Line[] = [
+  { speaker: "agent", text: "Thanks for the time. How are commercial contracts managed across the business today?" },
+  { speaker: "user", text: "Loosely. Signed contracts live in various inboxes and a shared drive — there's no central repository or renewal tracking." },
+  { speaker: "agent", text: "So do renewals and key dates ever slip through?" },
+  { speaker: "user", text: "They do. We auto-renewed a supplier deal last year we meant to renegotiate, and it cost us." },
+  { speaker: "agent", text: "How confident are you on GDPR and data-privacy compliance?" },
+  { speaker: "user", text: "Nervous. We have a policy but it's dated, and I'm not sure our processing records would hold up to scrutiny." },
+  { speaker: "agent", text: "Is legal involved early in deals, or brought in at the end?" },
+  { speaker: "user", text: "Usually at the end, as a bottleneck. By then terms are half-agreed and we're firefighting risk retrospectively." },
+  { speaker: "agent", text: "Any current disputes or exposure that concerns you?" },
+  { speaker: "user", text: "One ongoing dispute over an ambiguous SOW. Our templates aren't tight, so scope arguments come up more than they should." },
 ];
 
 const IT: Line[] = [
@@ -52,13 +41,15 @@ const SALES: Line[] = [
   { speaker: "user", text: "We're often out by twenty percent or more. Deals slip and we only find out late in the quarter." },
 ];
 
-const OPERATIONS: Line[] = [
-  { speaker: "agent", text: "How standardised are your core operational processes across sites?" },
-  { speaker: "user", text: "They vary a lot. Each site has its own way of working and there's little documented standard work." },
-  { speaker: "agent", text: "How do you plan capacity against demand?" },
-  { speaker: "user", text: "Mostly reactively. We firefight peaks with overtime rather than planning ahead with data." },
-  { speaker: "agent", text: "Is there a continuous improvement routine?" },
-  { speaker: "user", text: "Not really structured. Good ideas happen but they aren't captured or rolled out across the network." },
+const OPERATIONAL_DELIVERY: Line[] = [
+  { speaker: "agent", text: "How predictable is your delivery against committed timelines right now?" },
+  { speaker: "user", text: "Variable. Some projects land on time, others slip weeks and we only realise late because tracking is inconsistent." },
+  { speaker: "agent", text: "How is project governance structured — are there clear stage gates?" },
+  { speaker: "user", text: "Loosely. We have kick-offs but no consistent gate reviews, so scope and risk creep in unnoticed." },
+  { speaker: "agent", text: "Are you meeting your SLAs with clients?" },
+  { speaker: "user", text: "Mostly, but we don't measure it rigorously. Breaches tend to surface as complaints rather than in a dashboard." },
+  { speaker: "agent", text: "How do you allocate resource across concurrent deliveries?" },
+  { speaker: "user", text: "Reactively. The same senior people get pulled onto every escalation, and we don't have a clear capacity view." },
 ];
 
 const LEADERSHIP: Line[] = [
@@ -70,13 +61,36 @@ const LEADERSHIP: Line[] = [
   { speaker: "user", text: "Thin, honestly. We have a few key people we couldn't easily replace and no real succession planning." },
 ];
 
+const CULTURE: Line[] = [
+  { speaker: "agent", text: "How would you describe employee engagement across the organisation today?" },
+  { speaker: "user", text: "Mixed. Some teams are energised, others feel disconnected — and we don't measure it consistently to know which is which." },
+  { speaker: "agent", text: "Do your stated values actually show up in day-to-day behaviour?" },
+  { speaker: "user", text: "Honestly they're on the wall more than in the culture. Leaders don't always model them, so people are cynical." },
+  { speaker: "agent", text: "How do you recognise and reward good work?" },
+  { speaker: "user", text: "Ad hoc. There's no structured recognition, so it depends entirely on your manager whether you feel valued." },
+  { speaker: "agent", text: "What's driving people to leave when they do?" },
+  { speaker: "user", text: "Lack of progression and feeling unheard, mostly. We hear it anecdotally but never act on it systematically." },
+];
+
+const PRESALES: Line[] = [
+  { speaker: "agent", text: "What does your win rate look like on qualified opportunities?" },
+  { speaker: "user", text: "Around a third, but it swings a lot. We chase too many deals we were never going to win." },
+  { speaker: "agent", text: "How rigorous is discovery before you commit to a proposal?" },
+  { speaker: "user", text: "Light. We often jump to a demo before we truly understand the requirement, so proposals miss the mark." },
+  { speaker: "agent", text: "Walk me through how a proposal gets built." },
+  { speaker: "user", text: "It's a scramble. We copy-paste from old decks, there's no reuse library, and pricing is worked out at the last minute." },
+  { speaker: "agent", text: "How well do you qualify technical fit and competition early?" },
+  { speaker: "user", text: "Not well. We find out we're up against an incumbent late, and technical red flags surface after we've invested effort." },
+];
+
 const SCRIPTS: Record<DiagnosticFunction, Line[]> = {
-  finance: FINANCE,
-  hr: HR,
+  legal: LEGAL,
   it: IT,
+  "operational-delivery": OPERATIONAL_DELIVERY,
   sales: SALES,
-  operations: OPERATIONS,
   leadership: LEADERSHIP,
+  culture: CULTURE,
+  presales: PRESALES,
 };
 
 function ts(seconds: number): string {
@@ -87,7 +101,7 @@ function ts(seconds: number): string {
 
 /** Returns the scripted interview as timestamped transcript turns. */
 export function scriptFor(fn: DiagnosticFunction): TranscriptTurn[] {
-  const lines = SCRIPTS[fn] ?? FINANCE;
+  const lines = SCRIPTS[fn] ?? LEADERSHIP;
   let clock = 8;
   return lines.map((l) => {
     const turn: TranscriptTurn = { ...l, timestamp: ts(clock) };
