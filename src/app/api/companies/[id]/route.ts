@@ -7,12 +7,13 @@ import type { Company, DiagnosticFunction } from "@/lib/types";
 const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
 const VALID_FUNCTIONS: DiagnosticFunction[] = [
-  "finance",
-  "hr",
-  "sales",
-  "operations",
+  "legal",
   "it",
+  "operational-delivery",
+  "sales",
   "leadership",
+  "culture",
+  "presales",
 ];
 
 // GET /api/companies/:id — fetch a single company.

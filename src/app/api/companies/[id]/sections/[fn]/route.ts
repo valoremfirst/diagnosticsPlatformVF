@@ -18,12 +18,13 @@ import type { DiagnosticFunction, TranscriptTurn } from "@/lib/types";
 import { ResultValidationError } from "@/lib/validation";
 
 const VALID_FUNCTIONS: DiagnosticFunction[] = [
-  "finance",
-  "hr",
-  "sales",
-  "operations",
+  "legal",
   "it",
+  "operational-delivery",
+  "sales",
   "leadership",
+  "culture",
+  "presales",
 ];
 
 // GET /api/companies/:id/sections/:fn — list every transcript in the section.

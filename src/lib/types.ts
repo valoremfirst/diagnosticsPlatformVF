@@ -2,12 +2,13 @@
 // Mirrors the data model in the build brief.
 
 export type DiagnosticFunction =
-  | "finance"
-  | "hr"
-  | "sales"
-  | "operations"
+  | "legal"
   | "it"
-  | "leadership";
+  | "operational-delivery"
+  | "sales"
+  | "leadership"
+  | "culture"
+  | "presales";
 
 export type DiagnosticStatus =
   | "draft"

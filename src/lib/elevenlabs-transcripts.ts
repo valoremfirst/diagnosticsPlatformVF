@@ -20,12 +20,13 @@ const API_BASE = "https://api.elevenlabs.io/v1";
 const DEFAULT_MIN_MINUTES = 15;
 
 const SERVER_AGENT_ENV: Record<DiagnosticFunction, string | undefined> = {
-  finance: process.env.ELEVENLABS_AGENT_ID_FINANCE,
-  hr: process.env.ELEVENLABS_AGENT_ID_HR,
-  sales: process.env.ELEVENLABS_AGENT_ID_SALES,
-  operations: process.env.ELEVENLABS_AGENT_ID_OPERATIONS,
+  legal: process.env.ELEVENLABS_AGENT_ID_LEGAL,
   it: process.env.ELEVENLABS_AGENT_ID_IT,
+  "operational-delivery": process.env.ELEVENLABS_AGENT_ID_OPERATIONAL_DELIVERY,
+  sales: process.env.ELEVENLABS_AGENT_ID_SALES,
   leadership: process.env.ELEVENLABS_AGENT_ID_LEADERSHIP,
+  culture: process.env.ELEVENLABS_AGENT_ID_CULTURE,
+  presales: process.env.ELEVENLABS_AGENT_ID_PRESALES,
 };
 
 export function getServerAgentId(fn: DiagnosticFunction): string | undefined {

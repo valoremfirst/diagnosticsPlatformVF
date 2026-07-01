@@ -4,12 +4,13 @@ import { createSession, listSessions } from "@/lib/store";
 import type { DiagnosticFunction } from "@/lib/types";
 
 const VALID_FUNCTIONS: DiagnosticFunction[] = [
-  "finance",
-  "hr",
-  "sales",
-  "operations",
+  "legal",
   "it",
+  "operational-delivery",
+  "sales",
   "leadership",
+  "culture",
+  "presales",
 ];
 
 // GET /api/diagnostics — list all diagnostic sessions.

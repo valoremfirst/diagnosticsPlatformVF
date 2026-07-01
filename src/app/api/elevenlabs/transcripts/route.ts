@@ -11,12 +11,13 @@ import type { DiagnosticFunction } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 const VALID_FUNCTIONS: DiagnosticFunction[] = [
-  "finance",
-  "hr",
-  "sales",
-  "operations",
+  "legal",
   "it",
+  "operational-delivery",
+  "sales",
   "leadership",
+  "culture",
+  "presales",
 ];
 
 // GET /api/elevenlabs/transcripts?fn=finance&minMinutes=15
