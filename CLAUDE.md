@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 5. Shares read-only client reports via tokenized public links
 6. Protects agent-ID configuration behind password-protected admin console
 
-## Commands
+## Commands\
 
 ```bash
 npm run dev              # Start dev server on port 3000
