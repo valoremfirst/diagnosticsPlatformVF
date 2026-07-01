@@ -1,5 +1,6 @@
 import { HistoryTable } from "@/components/HistoryTable";
 import { PageHeader } from "@/components/PageHeader";
+import { requireAdmin } from "@/lib/auth";
 import { listSessions } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +10,7 @@ export default async function HistoryPage({
 }: {
   searchParams: { q?: string };
 }) {
+  await requireAdmin();
   const sessions = await listSessions();
 
   return (

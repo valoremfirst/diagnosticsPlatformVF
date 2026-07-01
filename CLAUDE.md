@@ -9,8 +9,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 2. Auto-imports completed transcripts (>15 min) from ElevenLabs
 3. Scores transcripts against business-maturity frameworks using Gemini
 4. Surfaces risks, recommendations, and framework maturity on an interactive dashboard
-5. Shares read-only client reports via tokenized public links
-6. Protects agent-ID configuration behind password-protected admin console
+5. Gives each client a read-only view of only their own company (Firebase Auth, role-based)
+6. Lets admins (consultants) manage the full portfolio, run interviews, and provision client accounts
 
 ## Commands\
 
@@ -30,11 +30,11 @@ If `npm` is not on PATH, prepend: `$env:Path += ";C:\node-v24.18.0-win-x64"`
 - Single entry point for all persistence
 - Routes to **Cloud Firestore** (when `FIREBASE_*` env vars set) or **in-memory fallback** (mock data)
 - Both backends are abstracted; swapping data stores requires only changing `store.ts` usage
-- Key entities: `Company`, `DiagnosticSession`, `DiagnosticResult`
+- Key entities: `Company`, `DiagnosticSession`, `DiagnosticResult`, `AppUser`
 
 ### API Routes
-- **`/api/companies/[id]/`** — CRUD on company metadata (brand colour, logo, description, agent IDs)
-  - `agentIds` mutations are **admin-only** (checked via `isAdminAuthed()` in route)
+Access control lives in `src/lib/auth.ts` (`apiRequire*` helpers). Reads are gated by company access (admin or owning client); writes/config are admin-only.
+- **`/api/companies/[id]/`** — GET (company access); PATCH company metadata incl. `agentIds` (**admin-only**)
 - **`/api/companies/[id]/sections/[fn]/`** — create diagnostic sessions from transcripts
   - Accepts raw text, array of turns, or `conversationId` (pulls from ElevenLabs)
   - Session IDs are **deterministic** when importing (format: `imp-{companyId}-{conversationId}`) to prevent duplicates on concurrent imports
@@ -42,23 +42,28 @@ If `npm` is not on PATH, prepend: `$env:Path += ";C:\node-v24.18.0-win-x64"`
 - **`/api/elevenlabs/transcripts`** — lists completed conversations >15 min per company+function
   - Looks up company's per-function agent IDs (`Company.agentIds[fn]`), falls back to `.env` defaults
 - **`/api/companies/[id]/ask`** — grounded AI Q&A (builds context from analysed diagnostics, asks Gemini)
-- **`/api/companies/[id]/share`** — generates/revokes tokenized public share links
+- **`/api/auth/session`** — POST exchanges a Firebase ID token for a `__session` cookie; DELETE signs out
+- **`/api/admin/users` + `/[uid]`** — admin-only user provisioning (create/list, update role/company, delete)
 
 ### UI Patterns
 - **Server components** for data fetching (pages, API routes)
 - **Client components** for interactivity (`"use client"`)
-- **AppShell** detects `/share/*` pathname (via middleware header) and strips nav chrome
+- **AppShell** loads the current user and renders role-aware chrome (admins: full portfolio + sidebar; clients: their one company only). Renders bare on `/login`.
 - **Tab-based sections** — each business function (Finance, HR, etc.) is a tab; key by `fn` to force remounts and reset local state
-- **Auto-import** — `useEffect` with `autoRan` ref guard pulls ElevenLabs conversations on section mount, deduped via stored `sourceConversationId`
+- **Auto-import** — `useEffect` with `autoRan` ref guard pulls ElevenLabs conversations on section mount, deduped via stored `sourceConversationId` (admin/read-write view only)
 
-### Auth
-Admin access to agent-ID configuration is protected by:
-1. **`src/lib/admin-auth.ts`** — password verification (constant-time compare), httpOnly cookie session
-2. **`src/app/api/admin/login/route.ts`** — POST to authenticate, DELETE to sign out
-3. **`src/components/admin/AdminAuth.tsx`** — login form, sign-out button
-4. **Gate in `/api/companies/[id]/`** — `agentIds` mutations return 403 unless `isAdminAuthed()`
+### Auth & Roles
+Identity is owned by **Firebase Authentication** (email/password). Two roles: `admin` (consultants, full portfolio) and `client` (sees only their assigned company, read-only).
 
-**Setup**: Set `ADMIN_PASSWORD` in `.env` locally, and in Vercel project Environment Variables.
+1. **`src/lib/firebase-client.ts`** — browser SDK; login form signs in and gets an ID token
+2. **`src/app/api/auth/session/route.ts`** — verifies the ID token (Admin SDK) and mints a `__session` cookie
+3. **`src/lib/auth.ts`** — server helpers: `getCurrentUser`, `requireUser`, `requireAdmin`, `assertCompanyAccess`, plus `apiRequire*` variants for route handlers. Role + `companyId` come from Firebase **custom claims**.
+4. **`src/middleware.ts`** — lightweight gate: redirects to `/login` when the `__session` cookie is absent (deep verification happens server-side, since Admin SDK can't run on Edge)
+5. **Provisioning** — admins create users via the admin console (`/api/admin/users`), which calls `createUser` + `setCustomUserClaims` and mirrors the record in the `users` Firestore collection
+
+**Cookie note**: the session cookie MUST be named `__session` — Firebase Hosting only forwards that one cookie to the SSR backend.
+
+**Setup**: Enable Email/Password in Firebase Auth; set `NEXT_PUBLIC_FIREBASE_*` (browser) config; seed the first admin by creating a user and setting `{role:"admin"}` claims once.
 
 ### Key Integrations
 
@@ -91,11 +96,13 @@ Admin access to agent-ID configuration is protected by:
 - No cleanup functions needed — React 18 guarantees `setState` on unmounted components is safe
 
 ### Middleware
-`src/middleware.ts` injects `x-pathname` header for AppShell to detect public share routes. Update matcher if adding new route prefixes that need chrome-stripping.
+`src/middleware.ts` injects the `x-pathname` header (for AppShell chrome) and redirects unauthenticated requests to `/login` based on `__session` cookie presence. Public prefixes (`/login`, `/api/auth`) bypass the gate. Update `PUBLIC_PREFIXES` / matcher when adding routes that must be reachable without a session.
 
 ### Types
 `src/lib/types.ts` is the source of truth for domain models:
-- `Company` — holds brand config, agent IDs, share token
+- `AppUser` — `{ uid, email, role, companyId?, ... }`; identity mirrors Firebase Auth + custom claims
+- `UserRole` — "admin" | "client"
+- `Company` — holds brand config and agent IDs
 - `DiagnosticSession` — one transcript analysis (status: draft | processing | complete | failed)
 - `DiagnosticResult` — scored frameworks, risks, recommendations
 - `DiagnosticFunction` — union of "legal" | "it" | "operational-delivery" | "sales" | "leadership" | "culture" | "presales"
@@ -107,10 +114,10 @@ Admin access to agent-ID configuration is protected by:
 
 **Required for production:**
 - `ELEVENLABS_API_KEY` — enables transcript import
-- `ELEVENLABS_AGENT_ID_FINANCE`, etc. — agent IDs per function (can be overridden per-company)
+- `ELEVENLABS_AGENT_ID_*` — agent IDs per function (can be overridden per-company)
 - `GEMINI_API_KEY` — switches from mock to real Gemini analysis
-- `ADMIN_PASSWORD` — unlocks `/admin` console
-- `FIREBASE_*` — Cloud Firestore credentials (optional; in-memory fallback works)
+- `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID` — browser Firebase config for Auth
+- `FIREBASE_PROJECT_ID` — server project id (Firestore + Auth). On Cloud Run / Cloud Functions, ADC supplies credentials automatically; locally, also set `FIREBASE_CLIENT_EMAIL` + `FIREBASE_PRIVATE_KEY`
 
 **Optional:**
 - `NEXT_PUBLIC_ELEVENLABS_AGENT_ID_*` — exposed to browser for live-session page
@@ -118,19 +125,17 @@ Admin access to agent-ID configuration is protected by:
 
 ## Deployment
 
-**Vercel** (recommended for Next.js):
-- Auto-builds on push to main
-- Set all secrets in project Environment Variables (not `.env` in repo)
-- Middleware and dynamic routes work out of the box
-
-**Environment Variables in Vercel:**
-Copy all non-public vars from `.env` to Vercel project settings, including `FIREBASE_PRIVATE_KEY` (Vercel handles `\n` escaping correctly).
+**Firebase Hosting + Cloud Functions** (Next.js web-frameworks):
+- `firebase.json` uses `hosting.source: "."` with `frameworksBackend.region` — Firebase detects Next.js and deploys SSR to a Cloud Function.
+- One-time: `firebase experiments:enable webframeworks`.
+- Deploy: `firebase deploy` (builds locally, uploads static assets + SSR function). No GitHub rollout pipeline.
+- Secrets → Cloud Secret Manager: `firebase functions:secrets:set ELEVENLABS_API_KEY` (and `GEMINI_API_KEY`). Non-secret `NEXT_PUBLIC_*` go in `.env.production`.
+- Firestore/Auth use ADC via the function's service account. **`createSessionCookie` needs the runtime SA to have the "Service Account Token Creator" role**, or provide `FIREBASE_CLIENT_EMAIL` + `FIREBASE_PRIVATE_KEY` secrets.
 
 ## Testing During Development
 
-- **Mock mode** (default): runs on seed data in `src/lib/mock-data.ts`
+- **Mock mode** (default): platform data runs on seed data in `src/lib/mock-data.ts`. Note: **auth requires Firebase** (there is no mock login) — configure `NEXT_PUBLIC_FIREBASE_*` and enable Email/Password.
 - **With ElevenLabs/Gemini**: set `ELEVENLABS_API_KEY` and `GEMINI_API_KEY` to enable real integrations
-- **Admin console**: set `ADMIN_PASSWORD` to test password gate at `/admin`
 - **Restart required** for `.env` changes to take effect; Fast Refresh handles `.tsx` changes
 
 ## Common Workflows
@@ -146,7 +151,8 @@ Copy all non-public vars from `.env` to Vercel project settings, including `FIRE
 2. Update Gemini prompts to assess it
 3. `DiagnosticResult.frameworks` will include it automatically once analysed
 
-**Gate a new API route behind admin:**
-1. Import `isAdminAuthed` from `src/lib/admin-auth.ts`
-2. Early return `403` if mutation touches admin-only fields
-3. Document in CLAUDE.md if it affects user workflows
+**Gate a new API route:**
+1. Import the helpers from `src/lib/auth.ts`
+2. `apiRequireAdmin()` for admin-only routes, or `apiRequireCompanyAccess(companyId)` for company-scoped routes; early-return `gate.response` when present
+3. For pages use `requireAdmin()` / `assertCompanyAccess()` (they redirect / notFound)
+4. Document in CLAUDE.md if it affects user workflows

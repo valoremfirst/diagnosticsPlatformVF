@@ -14,6 +14,7 @@ import { RoadmapTimeline } from "@/components/RoadmapTimeline";
 import { EmptyState } from "@/components/States";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { assertCompanyAccess, requireAdmin } from "@/lib/auth";
 import { functionById } from "@/lib/frameworks";
 import { getSession } from "@/lib/store";
 import { cn, formatDate, MATURITY_LABEL, maturityFromScore, scoreTone } from "@/lib/utils";
@@ -27,6 +28,10 @@ export default async function ResultsPage({
 }) {
   const session = await getSession(params.id);
   if (!session) notFound();
+
+  // Clients may only view diagnostics belonging to their own company.
+  if (session.companyId) await assertCompanyAccess(session.companyId);
+  else await requireAdmin();
 
   const fn = functionById(session.function);
 

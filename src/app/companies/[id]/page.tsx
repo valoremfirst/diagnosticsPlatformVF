@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { CompanyDashboardClient } from "@/components/company/CompanyDashboardClient";
+import { assertCompanyAccess } from "@/lib/auth";
 import { FRAMEWORKS, FUNCTIONS } from "@/lib/frameworks";
 import { getCompany, listSessionsByCompany } from "@/lib/store";
 import { maturityFromScore } from "@/lib/utils";
@@ -12,6 +13,10 @@ export default async function CompanyPage({
 }: {
   params: { id: string };
 }) {
+  // Admins see any company; clients only their own (foreign IDs → notFound).
+  const user = await assertCompanyAccess(params.id);
+  const isAdmin = user.role === "admin";
+
   const company = await getCompany(params.id);
   if (!company) notFound();
 
@@ -104,6 +109,7 @@ export default async function CompanyPage({
       company={company}
       sections={sections}
       radarData={radarData}
+      readOnly={!isAdmin}
       aggregates={{
         avgScore,
         completedCount: completed.length,

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { apiRequireAdmin, apiRequireCompanyAccess } from "@/lib/auth";
 import { getSession } from "@/lib/store";
 
 // POST /api/diagnostics/:id/export — return the full diagnostic as a JSON
@@ -12,6 +13,10 @@ export async function POST(
   if (!session) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
+  const gate = session.companyId
+    ? await apiRequireCompanyAccess(session.companyId)
+    : await apiRequireAdmin();
+  if ("response" in gate) return gate.response;
 
   const report = {
     generatedAt: new Date().toISOString(),

@@ -1,6 +1,24 @@
 // Core domain models for the Agentic Diagnostics Platform.
 // Mirrors the data model in the build brief.
 
+/** Platform roles. Admins see the whole portfolio; clients see one company. */
+export type UserRole = "admin" | "client";
+
+/**
+ * Application user. Identity is owned by Firebase Auth (keyed by `uid`); this
+ * record mirrors the role/company assignment (also stored as custom claims) so
+ * the admin console can list and manage users.
+ */
+export interface AppUser {
+  uid: string;
+  email: string;
+  role: UserRole;
+  /** Required for clients — the single company they may access. Ignored for admins. */
+  companyId?: string;
+  displayName?: string;
+  createdAt: string;
+}
+
 export type DiagnosticFunction =
   | "legal"
   | "it"
@@ -109,8 +127,6 @@ export interface Company {
    * auto-import resolves the agent id from here (falling back to env defaults).
    */
   agentIds?: Partial<Record<DiagnosticFunction, string>>;
-  /** Random token enabling a public, read-only share link for this company. */
-  shareToken?: string;
   createdAt: string;
 }
 

@@ -2,6 +2,7 @@ import { getDb } from "./firebase";
 import * as fs from "./firebase-repo";
 import { MOCK_COMPANIES, MOCK_SESSIONS } from "./mock-data";
 import type {
+  AppUser,
   Company,
   DiagnosticFunction,
   DiagnosticResult,
@@ -27,6 +28,8 @@ declare global {
   var __diagnosticStore: Map<string, DiagnosticSession> | undefined;
   // eslint-disable-next-line no-var
   var __companyStore: Map<string, Company> | undefined;
+  // eslint-disable-next-line no-var
+  var __userStore: Map<string, AppUser> | undefined;
 }
 
 function db(): Map<string, DiagnosticSession> {
@@ -50,6 +53,13 @@ function companyDb(): Map<string, Company> {
     globalThis.__companyStore = map;
   }
   return globalThis.__companyStore;
+}
+
+function userDb(): Map<string, AppUser> {
+  if (!globalThis.__userStore) {
+    globalThis.__userStore = new Map<string, AppUser>();
+  }
+  return globalThis.__userStore;
 }
 
 // Set to true if a live Firestore call fails (e.g. API not yet enabled).
@@ -225,15 +235,6 @@ export async function getCompany(id: string): Promise<Company | undefined> {
   );
 }
 
-/** Find a company by its public share token (used by the read-only share page). */
-export async function getCompanyByShareToken(
-  token: string,
-): Promise<Company | undefined> {
-  if (!token) return undefined;
-  const all = await listCompanies();
-  return all.find((c) => c.shareToken === token);
-}
-
 function slugify(name: string): string {
   return (
     name
@@ -349,6 +350,79 @@ export async function createSectionSession(
     selectedFrameworks: [],
     ...patch,
   });
+}
+
+// ---------------------------------------------------------------------------
+// Users (identity owned by Firebase Auth; this mirrors role/company assignment)
+// ---------------------------------------------------------------------------
+
+export async function listUsers(): Promise<AppUser[]> {
+  return tryFs(
+    () => fs.listUsers(),
+    () =>
+      [...userDb().values()].sort((a, b) => a.email.localeCompare(b.email)),
+  );
+}
+
+export async function getUser(uid: string): Promise<AppUser | undefined> {
+  return tryFs(
+    () => fs.getUser(uid),
+    () => userDb().get(uid),
+  );
+}
+
+export async function getUserByEmail(
+  email: string,
+): Promise<AppUser | undefined> {
+  const target = email.trim().toLowerCase();
+  if (!target) return undefined;
+  const all = await listUsers();
+  return all.find((u) => u.email.toLowerCase() === target);
+}
+
+export async function saveUser(user: AppUser): Promise<AppUser> {
+  return tryFs(
+    async () => {
+      await fs.saveUser(stripUndefined(user));
+      return user;
+    },
+    () => {
+      userDb().set(user.uid, user);
+      return user;
+    },
+  );
+}
+
+export async function updateUser(
+  uid: string,
+  patch: Partial<AppUser>,
+): Promise<AppUser | undefined> {
+  return tryFs(
+    () => fs.updateUser(uid, stripUndefined(patch)),
+    () => {
+      const existing = userDb().get(uid);
+      if (!existing) return undefined;
+      // uid and createdAt are immutable.
+      const next = {
+        ...existing,
+        ...patch,
+        uid: existing.uid,
+        createdAt: existing.createdAt,
+      };
+      userDb().set(uid, next);
+      return next;
+    },
+  );
+}
+
+export async function deleteUser(uid: string): Promise<boolean> {
+  return tryFs(
+    async () => {
+      await fs.deleteUser(uid);
+      return true;
+    },
+    () => userDb().delete(uid),
+  );
 }
 
 /**

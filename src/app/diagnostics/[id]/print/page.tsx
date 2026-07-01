@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { AutoPrint } from "@/components/AutoPrint";
+import { assertCompanyAccess, requireAdmin } from "@/lib/auth";
 import { functionById } from "@/lib/frameworks";
 import { getCompany, getSession } from "@/lib/store";
 import {
@@ -23,6 +24,10 @@ export default async function PrintReportPage({
 }) {
   const session = await getSession(params.id);
   if (!session || !session.result) notFound();
+
+  // Clients may only view diagnostics belonging to their own company.
+  if (session.companyId) await assertCompanyAccess(session.companyId);
+  else await requireAdmin();
 
   const result = session.result;
   const fn = functionById(session.function);

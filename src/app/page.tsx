@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AddCompanyButton } from "@/components/company/AddCompanyButton";
 import { MetricCard } from "@/components/MetricCard";
 import { Card } from "@/components/ui/Card";
+import { requireAdmin } from "@/lib/auth";
 import { FUNCTIONS } from "@/lib/frameworks";
 import { shade, withAlpha } from "@/lib/color";
 import { listCompanies, listSessionsByCompany } from "@/lib/store";
@@ -12,6 +13,8 @@ import { cn, MATURITY_LABEL, maturityFromScore, scoreTone } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function OverviewPage() {
+  // Portfolio view is admin-only; clients are redirected to their own company.
+  await requireAdmin();
   const companies = await listCompanies();
 
   const companyStats = await Promise.all(

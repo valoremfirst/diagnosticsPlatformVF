@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/States";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { requireAdmin } from "@/lib/auth";
 import { functionById } from "@/lib/frameworks";
 import { listSessions } from "@/lib/store";
 import { cn, formatDate, scoreTone } from "@/lib/utils";
@@ -14,6 +15,7 @@ import { cn, formatDate, scoreTone } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {
+  await requireAdmin();
   const reports = (await listSessions()).filter(
     (s) => s.status === "complete" && s.result,
   );

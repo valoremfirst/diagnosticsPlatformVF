@@ -4,6 +4,8 @@ import { History, LayoutGrid, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { SignOutButton } from "@/components/auth/SignOutButton";
+import type { UserRole } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface CompanyNav {
@@ -20,8 +22,17 @@ const NAV = [
   { href: "/admin", label: "Admin", icon: Settings2, match: (p: string) => p.startsWith("/admin") },
 ];
 
-export function SidebarNav({ companies }: { companies: CompanyNav[] }) {
+export function SidebarNav({
+  companies,
+  role,
+  user,
+}: {
+  companies: CompanyNav[];
+  role: UserRole;
+  user: { email: string };
+}) {
   const pathname = usePathname() || "/";
+  const isAdmin = role === "admin";
 
   return (
     <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-line bg-surface px-5 py-6 lg:flex print:hidden">
@@ -34,7 +45,7 @@ export function SidebarNav({ companies }: { companies: CompanyNav[] }) {
         <div className="mt-1 text-xs text-ink-muted">By ValoremFirst</div>
       </Link>
 
-      <nav className="mt-9 flex flex-col gap-1">
+      <nav className={cn("mt-9 flex flex-col gap-1", !isAdmin && "hidden")}>
         {NAV.map((item) => {
           const active = item.match(pathname);
           const Icon = item.icon;
@@ -60,9 +71,9 @@ export function SidebarNav({ companies }: { companies: CompanyNav[] }) {
       </nav>
 
       {/* Companies */}
-      <div className="mt-7">
+      <div className={cn(isAdmin ? "mt-7" : "mt-9")}>
         <div className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-faint">
-          Companies
+          {isAdmin ? "Companies" : "Your company"}
         </div>
         <div className="flex flex-col gap-1">
           {companies.map((c) => {
@@ -109,15 +120,28 @@ export function SidebarNav({ companies }: { companies: CompanyNav[] }) {
 
       <div className="mt-auto">
         <div className="flex items-center gap-3 border-t border-line px-1 pt-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-deep text-sm font-semibold text-white">
-            CC
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-deep text-sm font-semibold uppercase text-white">
+            {initials(user.email)}
           </div>
-          <div className="leading-tight">
-            <div className="text-sm font-medium text-ink">Connor Campagna</div>
-            <div className="text-xs text-ink-muted">Valorem First - Digital Support Engineer</div>
+          <div className="min-w-0 leading-tight">
+            <div className="truncate text-sm font-medium text-ink" title={user.email}>
+              {user.email}
+            </div>
+            <div className="text-xs capitalize text-ink-muted">{role}</div>
           </div>
+        </div>
+        <div className="mt-3">
+          <SignOutButton className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-line bg-surface px-3 text-sm font-medium text-ink-soft transition-colors hover:border-ink-faint disabled:opacity-60" />
         </div>
       </div>
     </aside>
   );
+}
+
+/** Two-letter initials from an email local-part, e.g. "connor.c" → "CC". */
+function initials(email: string): string {
+  const local = email.split("@")[0] ?? email;
+  const parts = local.split(/[.\-_]+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).slice(0, 2);
+  return local.slice(0, 2);
 }

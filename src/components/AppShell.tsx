@@ -1,28 +1,61 @@
 import { headers } from "next/headers";
 
-import { listCompanies } from "@/lib/store";
+import { getCurrentUser } from "@/lib/auth";
+import { getCompany, listCompanies } from "@/lib/store";
 
 import { SidebarNav } from "./SidebarNav";
 import { TopBar } from "./TopBar";
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
-  // Public routes (read-only client share) render without the nav chrome so no
-  // internal data — like the company list — is exposed.
   const pathname = headers().get("x-pathname") ?? "";
-  if (pathname.startsWith("/share")) {
+
+  // The login route renders bare (no nav chrome, no data).
+  if (pathname === "/login" || pathname.startsWith("/login/")) {
     return <div className="min-h-screen bg-canvas">{children}</div>;
   }
 
-  const companies = (await listCompanies()).map((c) => ({
-    id: c.id,
-    name: c.name,
-    shortName: c.shortName,
-    brandColor: c.brandColor,
-    profilePicture: c.profilePicture,
-  }));
+  const user = await getCurrentUser();
+
+  // Unauthenticated visitors are redirected to /login by middleware; render the
+  // children bare in the brief window before that redirect resolves.
+  if (!user) {
+    return <div className="min-h-screen bg-canvas">{children}</div>;
+  }
+
+  const isAdmin = user.role === "admin";
+
+  // Admins see the whole portfolio; clients see only their own company.
+  const companies = isAdmin
+    ? (await listCompanies()).map((c) => ({
+        id: c.id,
+        name: c.name,
+        shortName: c.shortName,
+        brandColor: c.brandColor,
+        profilePicture: c.profilePicture,
+      }))
+    : user.companyId
+      ? await getCompany(user.companyId).then((c) =>
+          c
+            ? [
+                {
+                  id: c.id,
+                  name: c.name,
+                  shortName: c.shortName,
+                  brandColor: c.brandColor,
+                  profilePicture: c.profilePicture,
+                },
+              ]
+            : [],
+        )
+      : [];
+
   return (
     <div className="flex min-h-screen bg-canvas">
-      <SidebarNav companies={companies} />
+      <SidebarNav
+        companies={companies}
+        role={user.role}
+        user={{ email: user.email }}
+      />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar />
         <main className="flex-1 px-6 py-8 lg:px-8">

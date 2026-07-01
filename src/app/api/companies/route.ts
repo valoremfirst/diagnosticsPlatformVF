@@ -1,16 +1,22 @@
 import { NextResponse } from "next/server";
 
+import { apiRequireAdmin } from "@/lib/auth";
 import { createCompany, listCompanies } from "@/lib/store";
 
 const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
-// GET /api/companies — list all companies.
+// GET /api/companies — list all companies (admin only; clients see only their own).
 export async function GET() {
+  const gate = await apiRequireAdmin();
+  if ("response" in gate) return gate.response;
   return NextResponse.json({ companies: await listCompanies() });
 }
 
-// POST /api/companies — create a new company.
+// POST /api/companies — create a new company (admin only).
 export async function POST(req: Request) {
+  const gate = await apiRequireAdmin();
+  if ("response" in gate) return gate.response;
+
   let body: Record<string, unknown>;
   try {
     body = await req.json();

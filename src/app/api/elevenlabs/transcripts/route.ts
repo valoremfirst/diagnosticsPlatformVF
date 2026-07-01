@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { apiRequireAdmin } from "@/lib/auth";
 import {
   ElevenLabsError,
   elevenLabsApiConfigured,
@@ -23,6 +24,9 @@ const VALID_FUNCTIONS: DiagnosticFunction[] = [
 // GET /api/elevenlabs/transcripts?fn=finance&minMinutes=15
 // Lists the agent's conversations over the minimum duration, ready to import.
 export async function GET(req: Request) {
+  const gate = await apiRequireAdmin();
+  if ("response" in gate) return gate.response;
+
   const { searchParams } = new URL(req.url);
   const fn = searchParams.get("fn") as DiagnosticFunction | null;
   const companyId = searchParams.get("companyId");

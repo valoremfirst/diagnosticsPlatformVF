@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 
+import { apiRequireAdmin } from "@/lib/auth";
 import { getSession, setTranscript, updateSession } from "@/lib/store";
 import type { TranscriptTurn } from "@/lib/types";
 
-// POST /api/diagnostics/:id/transcript — store the captured transcript.
+// POST /api/diagnostics/:id/transcript — store the captured transcript (admin).
 export async function POST(
   req: Request,
   { params }: { params: { id: string } },
 ) {
+  const gate = await apiRequireAdmin();
+  if ("response" in gate) return gate.response;
+
   const session = await getSession(params.id);
   if (!session) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });

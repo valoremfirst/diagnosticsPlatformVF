@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
 
+import { apiRequireAdmin } from "@/lib/auth";
 import { analyseTranscript } from "@/lib/gemini";
 import { getSession, setResult, updateSession } from "@/lib/store";
 import { ResultValidationError } from "@/lib/validation";
 
-// POST /api/diagnostics/:id/analyse — run framework scoring over the transcript.
+// POST /api/diagnostics/:id/analyse — run framework scoring over the transcript (admin).
 export async function POST(
   _req: Request,
   { params }: { params: { id: string } },
 ) {
+  const gate = await apiRequireAdmin();
+  if ("response" in gate) return gate.response;
+
   const session = await getSession(params.id);
   if (!session) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });

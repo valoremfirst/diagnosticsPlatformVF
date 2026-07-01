@@ -1,50 +1,14 @@
-import { AdminLogin, AdminLogout } from "@/components/admin/AdminAuth";
 import { AgentIdAdmin } from "@/components/admin/AgentIdAdmin";
+import { UserAdmin } from "@/components/admin/UserAdmin";
 import { PageHeader } from "@/components/PageHeader";
-import { Card } from "@/components/ui/Card";
-import { adminPasswordConfigured, isAdminAuthed } from "@/lib/admin-auth";
-import { listCompanies } from "@/lib/store";
+import { requireAdmin } from "@/lib/auth";
+import { listCompanies, listUsers } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const configured = adminPasswordConfigured();
-  const authed = isAdminAuthed();
+  await requireAdmin();
 
-  return (
-    <div className="animate-fade-in">
-      <div className="flex items-start justify-between gap-4">
-        <PageHeader
-          crumbs={[{ label: "Dashboard", href: "/" }, { label: "Admin" }]}
-          title="Admin console"
-          description="Configure each company's ElevenLabs agent IDs per business function. Auto-import uses these to pull the right conversations; the .env defaults apply where a company leaves a field blank."
-        />
-        {authed && (
-          <div className="pt-1">
-            <AdminLogout />
-          </div>
-        )}
-      </div>
-
-      {!configured ? (
-        <Card className="mx-auto mt-8 max-w-md p-7 text-center">
-          <h2 className="font-display text-lg text-ink">Admin not configured</h2>
-          <p className="mt-2 text-sm text-ink-muted">
-            Set an <code className="rounded bg-surface-muted px-1.5 py-0.5 text-xs">ADMIN_PASSWORD</code>{" "}
-            environment variable (locally in <code className="rounded bg-surface-muted px-1.5 py-0.5 text-xs">.env</code>{" "}
-            and in your Vercel project settings) to enable the admin console, then reload.
-          </p>
-        </Card>
-      ) : !authed ? (
-        <AdminLogin />
-      ) : (
-        <AuthedConsole />
-      )}
-    </div>
-  );
-}
-
-async function AuthedConsole() {
   const companies = (await listCompanies()).map((c) => ({
     id: c.id,
     name: c.name,
@@ -53,5 +17,27 @@ async function AuthedConsole() {
     profilePicture: c.profilePicture,
     agentIds: c.agentIds ?? {},
   }));
-  return <AgentIdAdmin companies={companies} />;
+
+  const users = await listUsers();
+  const companyOptions = companies.map((c) => ({ id: c.id, name: c.name }));
+
+  return (
+    <div className="animate-fade-in space-y-10">
+      <PageHeader
+        crumbs={[{ label: "Dashboard", href: "/" }, { label: "Admin" }]}
+        title="Admin console"
+        description="Manage client access and configure each company's ElevenLabs agent IDs per business function."
+      />
+
+      <section>
+        <h2 className="mb-3 font-display text-xl text-ink">Client access</h2>
+        <UserAdmin users={users} companies={companyOptions} />
+      </section>
+
+      <section>
+        <h2 className="mb-3 font-display text-xl text-ink">Agent configuration</h2>
+        <AgentIdAdmin companies={companies} />
+      </section>
+    </div>
+  );
 }

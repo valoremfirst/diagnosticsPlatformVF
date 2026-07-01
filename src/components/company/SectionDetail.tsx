@@ -38,15 +38,18 @@ export function SectionDetail({
   companyId,
   section,
   brand,
+  readOnly = false,
   onChanged,
 }: {
   companyId: string;
   section: SectionView;
   brand: string;
+  /** Clients: hide add/analyse/delete and the ElevenLabs auto-import. */
+  readOnly?: boolean;
   onChanged: () => void;
 }) {
   const { fn, transcripts } = section;
-  const [adding, setAdding] = useState(transcripts.length === 0);
+  const [adding, setAdding] = useState(!readOnly && transcripts.length === 0);
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -69,6 +72,7 @@ export function SectionDetail({
   // conversation (>15 min) that isn't already imported and save it as a draft.
   // No manual import step — analysis stays manual.
   useEffect(() => {
+    if (readOnly) return; // clients never trigger ElevenLabs imports
     if (autoRan.current) return;
     autoRan.current = true;
 
@@ -259,7 +263,7 @@ export function SectionDetail({
         <div className="lg:col-span-3">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-ink">Transcripts</h3>
-            <div className="flex items-center gap-2">
+            <div className={cn("flex items-center gap-2", readOnly && "hidden")}>
               {pending.length > 0 && (
                 <button
                   type="button"
@@ -466,6 +470,10 @@ export function SectionDetail({
                     >
                       Results
                     </Link>
+                  ) : readOnly ? (
+                    <span className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-ink-faint">
+                      Pending review
+                    </span>
                   ) : (
                     <button
                       type="button"
@@ -487,25 +495,29 @@ export function SectionDetail({
                       )}
                     </button>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => remove(t.sessionId)}
-                    disabled={deletingId === t.sessionId}
-                    className="shrink-0 rounded-lg p-1.5 text-ink-faint hover:bg-danger/10 hover:text-danger disabled:opacity-50"
-                    aria-label="Delete transcript"
-                  >
-                    {deletingId === t.sessionId ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </button>
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={() => remove(t.sessionId)}
+                      disabled={deletingId === t.sessionId}
+                      className="shrink-0 rounded-lg p-1.5 text-ink-faint hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                      aria-label="Delete transcript"
+                    >
+                      {deletingId === t.sessionId ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </button>
+                  )}
                 </div>
               );
             })}
             {transcripts.length === 0 && !adding && (
               <p className="py-8 text-center text-sm text-ink-muted">
-                No transcripts yet. Add one to score this section.
+                {readOnly
+                  ? "No transcripts in this section yet."
+                  : "No transcripts yet. Add one to score this section."}
               </p>
             )}
           </div>

@@ -1,4 +1,5 @@
 import type { App } from "firebase-admin/app";
+import type { Auth } from "firebase-admin/auth";
 import type { Firestore } from "firebase-admin/firestore";
 
 /**
@@ -46,18 +47,17 @@ export function firebaseEnabled(): boolean {
 }
 
 /**
- * Returns a singleton Firestore instance, or null when Firebase is not
- * configured. The Admin SDK is imported lazily so the dependency never loads
+ * Returns the singleton Admin SDK app, or null when Firebase is not configured
+ * or init fails. The Admin SDK is imported lazily so the dependency never loads
  * in environments that run purely on mock data.
  */
 let initFailed = false;
 
-export async function getDb(): Promise<Firestore | null> {
+export async function getAdminApp(): Promise<App | null> {
   if (!firebaseEnabled() || initFailed) return null;
 
   try {
     const { getApps, initializeApp, cert, applicationDefault } = await import("firebase-admin/app");
-    const { getFirestore } = await import("firebase-admin/firestore");
 
     if (!globalThis.__firebaseApp) {
       const existing = getApps();
@@ -73,7 +73,7 @@ export async function getDb(): Promise<Firestore | null> {
           }),
         });
       } else {
-        // On Firebase App Hosting / Cloud Run, use the automatic service account.
+        // On Firebase App Hosting / Cloud Run / Cloud Functions, use ADC.
         globalThis.__firebaseApp = initializeApp({
           credential: applicationDefault(),
           projectId: process.env.FIREBASE_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT,
@@ -81,10 +81,10 @@ export async function getDb(): Promise<Firestore | null> {
       }
     }
 
-    return getFirestore(globalThis.__firebaseApp);
+    return globalThis.__firebaseApp;
   } catch (err) {
-    // Malformed credentials, etc. Fall back to the in-memory store rather than
-    // crashing the app, and don't retry the broken init on every request.
+    // Malformed credentials, etc. Fall back rather than crashing the app, and
+    // don't retry the broken init on every request.
     initFailed = true;
     console.warn(
       "[firebase] Admin SDK init failed — falling back to in-memory store.",
@@ -94,8 +94,31 @@ export async function getDb(): Promise<Firestore | null> {
   }
 }
 
+/**
+ * Returns a singleton Firestore instance, or null when Firebase is not
+ * configured.
+ */
+export async function getDb(): Promise<Firestore | null> {
+  const app = await getAdminApp();
+  if (!app) return null;
+  const { getFirestore } = await import("firebase-admin/firestore");
+  return getFirestore(app);
+}
+
+/**
+ * Returns the Admin Auth instance, or null when Firebase is not configured.
+ * Used to verify session cookies and manage users.
+ */
+export async function getAdminAuth(): Promise<Auth | null> {
+  const app = await getAdminApp();
+  if (!app) return null;
+  const { getAuth } = await import("firebase-admin/auth");
+  return getAuth(app);
+}
+
 // Firestore collection names — single source of truth for the data model.
 export const COLLECTIONS = {
   companies: "companies",
   sessions: "diagnosticSessions",
+  users: "users",
 } as const;

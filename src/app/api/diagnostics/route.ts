@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { apiRequireAdmin } from "@/lib/auth";
 import { createSession, listSessions } from "@/lib/store";
 import type { DiagnosticFunction } from "@/lib/types";
 
@@ -13,13 +14,18 @@ const VALID_FUNCTIONS: DiagnosticFunction[] = [
   "presales",
 ];
 
-// GET /api/diagnostics — list all diagnostic sessions.
+// GET /api/diagnostics — list all diagnostic sessions (admin only).
 export async function GET() {
+  const gate = await apiRequireAdmin();
+  if ("response" in gate) return gate.response;
   return NextResponse.json({ sessions: await listSessions() });
 }
 
-// POST /api/diagnostics — start a new diagnostic (status: draft).
+// POST /api/diagnostics — start a new diagnostic (admin only).
 export async function POST(req: Request) {
+  const gate = await apiRequireAdmin();
+  if ("response" in gate) return gate.response;
+
   let body: Record<string, unknown>;
   try {
     body = await req.json();

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { isAdminAuthed } from "@/lib/admin-auth";
+import { apiRequireAdmin, apiRequireCompanyAccess } from "@/lib/auth";
 import { getCompany, updateCompany } from "@/lib/store";
 import type { Company, DiagnosticFunction } from "@/lib/types";
 
@@ -16,11 +16,14 @@ const VALID_FUNCTIONS: DiagnosticFunction[] = [
   "presales",
 ];
 
-// GET /api/companies/:id — fetch a single company.
+// GET /api/companies/:id — fetch a single company (admin or the owning client).
 export async function GET(
   _req: Request,
   { params }: { params: { id: string } },
 ) {
+  const gate = await apiRequireCompanyAccess(params.id);
+  if ("response" in gate) return gate.response;
+
   const company = await getCompany(params.id);
   if (!company) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
@@ -28,11 +31,14 @@ export async function GET(
   return NextResponse.json({ company });
 }
 
-// PATCH /api/companies/:id — update editable company fields (e.g. brand colour).
+// PATCH /api/companies/:id — update editable company fields (admin only).
 export async function PATCH(
   req: Request,
   { params }: { params: { id: string } },
 ) {
+  const gate = await apiRequireAdmin();
+  if ("response" in gate) return gate.response;
+
   const company = await getCompany(params.id);
   if (!company) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
@@ -73,14 +79,6 @@ export async function PATCH(
     patch.description = String(body.description).trim();
   }
   if (body.agentIds !== undefined && typeof body.agentIds === "object") {
-    // Agent IDs are admin-only — they control which ElevenLabs conversations
-    // get pulled, so writing them requires a valid admin session.
-    if (!isAdminAuthed()) {
-      return NextResponse.json(
-        { error: "Admin authentication required to change agent IDs." },
-        { status: 403 },
-      );
-    }
     // Keep only valid function keys with non-empty string ids.
     const raw = body.agentIds as Record<string, unknown>;
     const cleaned: Partial<Record<DiagnosticFunction, string>> = {};

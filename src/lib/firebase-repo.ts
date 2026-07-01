@@ -1,5 +1,6 @@
 import { COLLECTIONS, getDb } from "./firebase";
 import type {
+  AppUser,
   Company,
   DiagnosticFunction,
   DiagnosticResult,
@@ -134,4 +135,43 @@ export async function listSectionSessions(
 ): Promise<DiagnosticSession[]> {
   const all = await listSessions();
   return all.filter((s) => s.companyId === companyId && s.function === fn);
+}
+
+// ---------------------------------------------------------------------------
+// Users (keyed by Firebase Auth uid)
+// ---------------------------------------------------------------------------
+
+export async function listUsers(): Promise<AppUser[]> {
+  const snap = await (await db()).collection(COLLECTIONS.users).get();
+  return snap.docs
+    .map((d) => d.data() as AppUser)
+    .sort((a, b) => a.email.localeCompare(b.email));
+}
+
+export async function getUser(uid: string): Promise<AppUser | undefined> {
+  const doc = await (await db()).collection(COLLECTIONS.users).doc(uid).get();
+  return doc.exists ? (doc.data() as AppUser) : undefined;
+}
+
+export async function saveUser(user: AppUser): Promise<AppUser> {
+  await (await db())
+    .collection(COLLECTIONS.users)
+    .doc(user.uid)
+    .set(user, { merge: true });
+  return user;
+}
+
+export async function updateUser(
+  uid: string,
+  patch: Partial<AppUser>,
+): Promise<AppUser | undefined> {
+  const existing = await getUser(uid);
+  if (!existing) return undefined;
+  // uid and createdAt are immutable.
+  const next = { ...existing, ...patch, uid, createdAt: existing.createdAt };
+  return saveUser(next);
+}
+
+export async function deleteUser(uid: string): Promise<void> {
+  await (await db()).collection(COLLECTIONS.users).doc(uid).delete();
 }

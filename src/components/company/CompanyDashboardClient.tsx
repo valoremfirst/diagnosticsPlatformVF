@@ -7,7 +7,6 @@ import { type CSSProperties, useState } from "react";
 import { BrandColorPicker } from "@/components/company/BrandColorPicker";
 import { CompanyChat } from "@/components/company/CompanyChat";
 import { SectionDetail } from "@/components/company/SectionDetail";
-import { ShareButton } from "@/components/company/ShareButton";
 import { MetricCard } from "@/components/MetricCard";
 import { RadarScoreChart, type RadarDatum } from "@/components/RadarScoreChart";
 import { Card } from "@/components/ui/Card";
@@ -53,6 +52,7 @@ export function CompanyDashboardClient({
   sections,
   radarData,
   aggregates,
+  readOnly = false,
 }: {
   company: Company;
   sections: SectionView[];
@@ -65,6 +65,8 @@ export function CompanyDashboardClient({
     totalRisks: number;
     criticalRisks: number;
   };
+  /** Clients get a read-only view: no brand/logo/description edits or uploads. */
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const [savedColor, setSavedColor] = useState(company.brandColor);
@@ -143,15 +145,17 @@ export function CompanyDashboardClient({
                     alt={company.name}
                     className="h-12 w-12 rounded-xl object-cover"
                   />
-                  <button
-                    type="button"
-                    onClick={() => { setPicDraft(savedPicture); setEditingPic(true); }}
-                    className="absolute inset-0 flex items-center justify-center rounded-xl opacity-0 group-hover/pic:opacity-100 transition-opacity"
-                    style={{ background: withAlpha("#000000", 0.4) }}
-                    title="Change logo"
-                  >
-                    <Pencil className="h-3.5 w-3.5 text-white" />
-                  </button>
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={() => { setPicDraft(savedPicture); setEditingPic(true); }}
+                      className="absolute inset-0 flex items-center justify-center rounded-xl opacity-0 group-hover/pic:opacity-100 transition-opacity"
+                      style={{ background: withAlpha("#000000", 0.4) }}
+                      title="Change logo"
+                    >
+                      <Pencil className="h-3.5 w-3.5 text-white" />
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="relative group/pic">
@@ -161,15 +165,17 @@ export function CompanyDashboardClient({
                   >
                     {company.shortName}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => { setPicDraft(""); setEditingPic(true); }}
-                    className="absolute inset-0 flex items-center justify-center rounded-xl opacity-0 group-hover/pic:opacity-100 transition-opacity"
-                    style={{ background: withAlpha("#000000", 0.4) }}
-                    title="Add logo"
-                  >
-                    <Pencil className="h-3.5 w-3.5 text-white" />
-                  </button>
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={() => { setPicDraft(""); setEditingPic(true); }}
+                      className="absolute inset-0 flex items-center justify-center rounded-xl opacity-0 group-hover/pic:opacity-100 transition-opacity"
+                      style={{ background: withAlpha("#000000", 0.4) }}
+                      title="Add logo"
+                    >
+                      <Pencil className="h-3.5 w-3.5 text-white" />
+                    </button>
+                  )}
                 </div>
               )}
               <div
@@ -248,31 +254,36 @@ export function CompanyDashboardClient({
                     {savedDescription}
                   </p>
                 ) : (
-                  <p className="text-[14px] italic" style={{ color: withAlpha(ink, 0.45) }}>
-                    Add a company description...
-                  </p>
+                  !readOnly && (
+                    <p className="text-[14px] italic" style={{ color: withAlpha(ink, 0.45) }}>
+                      Add a company description...
+                    </p>
+                  )
                 )}
-                <button
-                  type="button"
-                  onClick={() => { setDescDraft(savedDescription); setEditingDesc(true); }}
-                  className="mt-0.5 flex-shrink-0 rounded p-1 opacity-0 group-hover/desc:opacity-100 transition-opacity hover:bg-white/20"
-                  title="Edit description"
-                >
-                  <Pencil className="h-3.5 w-3.5" style={{ color: withAlpha(ink, 0.7) }} />
-                </button>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    onClick={() => { setDescDraft(savedDescription); setEditingDesc(true); }}
+                    className="mt-0.5 flex-shrink-0 rounded p-1 opacity-0 group-hover/desc:opacity-100 transition-opacity hover:bg-white/20"
+                    title="Edit description"
+                  >
+                    <Pencil className="h-3.5 w-3.5" style={{ color: withAlpha(ink, 0.7) }} />
+                  </button>
+                )}
               </div>
             )}
           </div>
 
           <div className="flex flex-col items-end gap-4">
-            <div className="flex items-center gap-2">
-              <ShareButton companyId={company.id} ink={ink} />
-              <BrandColorPicker
-                value={savedColor}
-                onPreview={(hex) => setPreview(hex)}
-                onSave={saveColor}
-              />
-            </div>
+            {!readOnly && (
+              <div className="flex items-center gap-2">
+                <BrandColorPicker
+                  value={savedColor}
+                  onPreview={(hex) => setPreview(hex)}
+                  onSave={saveColor}
+                />
+              </div>
+            )}
             <div
               className="rounded-2xl p-5 text-right"
               style={{ background: withAlpha(ink === "#FFFFFF" ? "#FFFFFF" : "#1A1A1A", 0.12) }}
@@ -483,6 +494,7 @@ export function CompanyDashboardClient({
               companyId={company.id}
               section={activeSection}
               brand={brand}
+              readOnly={readOnly}
               onChanged={() => router.refresh()}
             />
           </Card>

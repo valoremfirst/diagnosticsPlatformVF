@@ -2,6 +2,7 @@ import { Check } from "lucide-react";
 
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/Card";
+import { requireAdmin } from "@/lib/auth";
 import { FRAMEWORKS } from "@/lib/frameworks";
 import { listSessions } from "@/lib/store";
 import { cn, MATURITY_LABEL, maturityFromScore, scoreTone } from "@/lib/utils";
@@ -9,6 +10,7 @@ import { cn, MATURITY_LABEL, maturityFromScore, scoreTone } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function FrameworksPage() {
+  await requireAdmin();
   const completed = (await listSessions()).filter((s) => s.result);
 
   function portfolioScore(name: string): number | null {

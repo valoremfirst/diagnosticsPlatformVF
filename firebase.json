@@ -1,13 +1,13 @@
 {
-  "apphosting": {
-    "backendId": "diagnosticsbackend",
-    "rootDir": "/",
+  "hosting": {
+    "source": ".",
+    "frameworksBackend": {
+      "region": "europe-west4"
+    },
     "ignore": [
-      "node_modules",
-      ".git",
-      "firebase-debug.log",
-      "firebase-debug.*.log",
-      "functions"
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
     ]
   }
 }

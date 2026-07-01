@@ -5,6 +5,7 @@ import { EvidenceReview } from "@/components/EvidenceReview";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/States";
 import { Button } from "@/components/ui/Button";
+import { assertCompanyAccess, requireAdmin } from "@/lib/auth";
 import { functionById } from "@/lib/frameworks";
 import { getSession } from "@/lib/store";
 
@@ -17,6 +18,10 @@ export default async function EvidencePage({
 }) {
   const session = await getSession(params.id);
   if (!session) notFound();
+
+  // Clients may only view diagnostics belonging to their own company.
+  if (session.companyId) await assertCompanyAccess(session.companyId);
+  else await requireAdmin();
 
   const fn = functionById(session.function);
 

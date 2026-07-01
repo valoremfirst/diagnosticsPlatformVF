@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { apiRequireCompanyAccess } from "@/lib/auth";
 import { askGemini, geminiEnabled } from "@/lib/gemini";
 import { getCompany, listSessionsByCompany } from "@/lib/store";
 import { functionById } from "@/lib/frameworks";
@@ -14,6 +15,9 @@ export async function POST(
   req: Request,
   { params }: { params: { id: string } },
 ) {
+  const gate = await apiRequireCompanyAccess(params.id);
+  if ("response" in gate) return gate.response;
+
   const company = await getCompany(params.id);
   if (!company) {
     return NextResponse.json({ error: "Company not found." }, { status: 404 });

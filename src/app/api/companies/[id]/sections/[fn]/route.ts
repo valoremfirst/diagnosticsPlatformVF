@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { apiRequireAdmin, apiRequireCompanyAccess } from "@/lib/auth";
 import {
   ElevenLabsError,
   fetchConversationTranscript,
@@ -32,6 +33,9 @@ export async function GET(
   _req: Request,
   { params }: { params: { id: string; fn: string } },
 ) {
+  const gate = await apiRequireCompanyAccess(params.id);
+  if ("response" in gate) return gate.response;
+
   const fn = params.fn as DiagnosticFunction;
   if (!VALID_FUNCTIONS.includes(fn)) {
     return NextResponse.json({ error: "Unknown function." }, { status: 400 });
@@ -48,6 +52,10 @@ export async function POST(
   req: Request,
   { params }: { params: { id: string; fn: string } },
 ) {
+  // Uploading / importing transcripts is an admin (consultant) action.
+  const gate = await apiRequireAdmin();
+  if ("response" in gate) return gate.response;
+
   const company = await getCompany(params.id);
   if (!company) {
     return NextResponse.json({ error: "Company not found." }, { status: 404 });
