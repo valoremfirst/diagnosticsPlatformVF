@@ -26,12 +26,23 @@ declare global {
   var __firebaseApp: App | undefined;
 }
 
-export function firebaseEnabled(): boolean {
+// True when explicit service-account credentials are provided (local dev / Vercel).
+function hasExplicitCreds(): boolean {
   return Boolean(
     process.env.FIREBASE_PROJECT_ID &&
       process.env.FIREBASE_CLIENT_EMAIL &&
       process.env.FIREBASE_PRIVATE_KEY,
   );
+}
+
+// True when running on Google Cloud (Firebase App Hosting / Cloud Run).
+// K_SERVICE is injected by Cloud Run; FIREBASE_PROJECT_ID can optionally pin the project.
+function isGoogleCloud(): boolean {
+  return Boolean(process.env.K_SERVICE || process.env.GOOGLE_CLOUD_PROJECT);
+}
+
+export function firebaseEnabled(): boolean {
+  return hasExplicitCreds() || isGoogleCloud();
 }
 
 /**
@@ -45,25 +56,29 @@ export async function getDb(): Promise<Firestore | null> {
   if (!firebaseEnabled() || initFailed) return null;
 
   try {
-    const { getApps, initializeApp, cert } = await import("firebase-admin/app");
+    const { getApps, initializeApp, cert, applicationDefault } = await import("firebase-admin/app");
     const { getFirestore } = await import("firebase-admin/firestore");
 
     if (!globalThis.__firebaseApp) {
       const existing = getApps();
-      globalThis.__firebaseApp =
-        existing.length > 0
-          ? existing[0]
-          : initializeApp({
-              credential: cert({
-                projectId: process.env.FIREBASE_PROJECT_ID,
-                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-                // Vercel/CI store the key with escaped newlines.
-                privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(
-                  /\\n/g,
-                  "\n",
-                ),
-              }),
-            });
+      if (existing.length > 0) {
+        globalThis.__firebaseApp = existing[0];
+      } else if (hasExplicitCreds()) {
+        globalThis.__firebaseApp = initializeApp({
+          credential: cert({
+            projectId: process.env.FIREBASE_PROJECT_ID,
+            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+            // Vercel/CI store the key with escaped newlines.
+            privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+          }),
+        });
+      } else {
+        // On Firebase App Hosting / Cloud Run, use the automatic service account.
+        globalThis.__firebaseApp = initializeApp({
+          credential: applicationDefault(),
+          projectId: process.env.FIREBASE_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT,
+        });
+      }
     }
 
     return getFirestore(globalThis.__firebaseApp);
