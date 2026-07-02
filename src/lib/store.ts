@@ -447,6 +447,38 @@ export async function deleteUser(uid: string): Promise<boolean> {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Global ElevenLabs configuration (agent ID defaults, stored in Firestore)
+// ---------------------------------------------------------------------------
+
+/** In-memory fallback when Firestore is unavailable. */
+let _memGlobalConfig: fs.GlobalElevenLabsConfig = { agentIds: {} };
+
+export async function getGlobalAgentConfig(): Promise<fs.GlobalElevenLabsConfig> {
+  return tryFs(
+    () => fs.getGlobalConfig(),
+    () => _memGlobalConfig,
+  );
+}
+
+export async function setGlobalAgentConfig(
+  patch: Partial<fs.GlobalElevenLabsConfig>,
+): Promise<fs.GlobalElevenLabsConfig> {
+  return tryFs(
+    () => fs.setGlobalConfig(patch),
+    () => {
+      _memGlobalConfig = { ..._memGlobalConfig, ...patch };
+      if (patch.agentIds) {
+        _memGlobalConfig.agentIds = {
+          ..._memGlobalConfig.agentIds,
+          ...patch.agentIds,
+        };
+      }
+      return _memGlobalConfig;
+    },
+  );
+}
+
 /**
  * Firestore rejects `undefined` field values. Optional fields on our models are
  * frequently undefined, so strip them before writing.

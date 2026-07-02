@@ -123,4 +123,5 @@ export const COLLECTIONS = {
   companies: "companies",
   sessions: "diagnosticSessions",
   users: "users",
+  config: "config",
 } as const;

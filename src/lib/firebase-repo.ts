@@ -7,6 +7,28 @@ import type {
   DiagnosticSession,
 } from "./types";
 
+export interface GlobalElevenLabsConfig {
+  agentIds: Partial<Record<DiagnosticFunction, string>>;
+  apiKey?: string;
+}
+
+export async function getGlobalConfig(): Promise<GlobalElevenLabsConfig> {
+  const doc = await (await db())
+    .collection(COLLECTIONS.config)
+    .doc("elevenlabs")
+    .get();
+  return (doc.exists ? doc.data() : {}) as GlobalElevenLabsConfig;
+}
+
+export async function setGlobalConfig(
+  patch: Partial<GlobalElevenLabsConfig>,
+): Promise<GlobalElevenLabsConfig> {
+  const ref = (await db()).collection(COLLECTIONS.config).doc("elevenlabs");
+  await ref.set(patch, { merge: true });
+  const updated = await ref.get();
+  return (updated.data() ?? {}) as GlobalElevenLabsConfig;
+}
+
 /**
  * Cloud Firestore repository — the persistent counterpart to the in-memory
  * store (store.ts). Every function mirrors a store.ts export but is async, so

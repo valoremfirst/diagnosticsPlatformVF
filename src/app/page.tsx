@@ -2,12 +2,19 @@ import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
 import { AddCompanyButton } from "@/components/company/AddCompanyButton";
+import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { Card } from "@/components/ui/Card";
 import { Orb } from "@/components/ui/Orb";
+import { PortfolioOrb } from "@/components/ui/PortfolioOrb";
 import { requireAdmin } from "@/lib/auth";
 import { FUNCTIONS } from "@/lib/frameworks";
 import { shade, withAlpha } from "@/lib/color";
-import { listCompanies, listSessionsLean } from "@/lib/store";
+import {
+  getGlobalAgentConfig,
+  listCompanies,
+  listSessionsLean,
+  listUsers,
+} from "@/lib/store";
 import { cn, MATURITY_LABEL, maturityFromScore, scoreTone } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -70,6 +77,46 @@ export default async function OverviewPage() {
     year: "numeric",
   }).format(new Date());
 
+  // Onboarding — computed server-side so the checklist reflects real state.
+  const [globalConfig, users] = await Promise.all([
+    getGlobalAgentConfig().catch(() => ({ agentIds: {} })),
+    listUsers().catch(() => []),
+  ]);
+  const agentsConfigured =
+    Object.values(globalConfig.agentIds ?? {}).some((v) => v?.trim()) ||
+    companies.some((c) => Object.values(c.agentIds ?? {}).some((v) => v?.trim())) ||
+    Boolean(process.env.ELEVENLABS_AGENT_ID_LEGAL);
+  const onboardingSteps = [
+    {
+      id: "company",
+      label: "Add your first company",
+      description: "Create a client company to hold its diagnostics.",
+      href: "/",
+      done: companies.length > 0,
+    },
+    {
+      id: "agents",
+      label: "Configure ElevenLabs agents",
+      description: "Point each business function at its interview agent.",
+      href: "/admin",
+      done: agentsConfigured,
+    },
+    {
+      id: "diagnostic",
+      label: "Import and score a diagnostic",
+      description: "Pull a completed interview and run the analysis.",
+      href: companies[0] ? `/companies/${companies[0].id}` : "/",
+      done: portfolioCompleted > 0,
+    },
+    {
+      id: "client",
+      label: "Invite a client",
+      description: "Provision a read-only account scoped to their company.",
+      href: "/admin",
+      done: users.some((u) => u.role === "client"),
+    },
+  ];
+
   return (
     <div className="animate-fade-in">
 
@@ -88,9 +135,11 @@ export default async function OverviewPage() {
           </p>
         </div>
         <div className="hidden shrink-0 pt-2 lg:block">
-          <Orb agent="george" size={104} />
+          <PortfolioOrb size={104} />
         </div>
       </section>
+
+      <OnboardingChecklist steps={onboardingSteps} />
 
       {/* Portfolio KPI strip */}
       <section className="mb-12 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line lg:grid-cols-4">
@@ -106,6 +155,18 @@ export default async function OverviewPage() {
           <div className="eyebrow">All companies</div>
           <AddCompanyButton />
         </div>
+        {companyStats.length === 0 && (
+          <div className="flex flex-col items-center rounded-2xl border border-dashed border-line-strong bg-surface px-6 py-14 text-center">
+            <Orb agent="george" size={72} interactive={false} />
+            <h3 className="mt-2 font-display text-xl text-ink">
+              No companies yet
+            </h3>
+            <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-ink-muted">
+              Add your first client company and its voice-led diagnostics will
+              appear here as they complete.
+            </p>
+          </div>
+        )}
         <div className="grid gap-5 sm:grid-cols-2">
           {companyStats.map(({ company, avgScore, sectionsScored, sectionsTotal, risks }) => {
             const tone = avgScore > 0 ? scoreTone(avgScore) : null;

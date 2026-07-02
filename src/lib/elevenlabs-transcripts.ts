@@ -1,3 +1,4 @@
+import { getGlobalAgentConfig } from "./store";
 import type { DiagnosticFunction, Speaker, TranscriptTurn } from "./types";
 
 /**
@@ -31,6 +32,23 @@ const SERVER_AGENT_ENV: Record<DiagnosticFunction, string | undefined> = {
 
 export function getServerAgentId(fn: DiagnosticFunction): string | undefined {
   return SERVER_AGENT_ENV[fn];
+}
+
+/**
+ * Resolve an agent ID for a function. Priority:
+ *   1. Per-company override (passed by caller)
+ *   2. Global Firestore config (set in Admin → Agent configuration)
+ *   3. Env var fallback (ELEVENLABS_AGENT_ID_*)
+ */
+export async function resolveAgentId(
+  fn: DiagnosticFunction,
+  companyOverride?: string,
+): Promise<string | undefined> {
+  if (companyOverride?.trim()) return companyOverride.trim();
+  const global = await getGlobalAgentConfig();
+  const fromFirestore = global.agentIds?.[fn];
+  if (fromFirestore?.trim()) return fromFirestore.trim();
+  return getServerAgentId(fn);
 }
 
 export function elevenLabsApiConfigured(): boolean {
@@ -99,8 +117,8 @@ export async function listLongConversations(
   minMinutes: number = DEFAULT_MIN_MINUTES,
   agentIdOverride?: string,
 ): Promise<ConversationSummary[]> {
-  // Per-company agent id wins; fall back to the env default for the function.
-  const agentId = agentIdOverride?.trim() || getServerAgentId(fn);
+  // Per-company override → Firestore global config → env var.
+  const agentId = await resolveAgentId(fn, agentIdOverride);
   if (!agentId) {
     throw new ElevenLabsError(
       `No ElevenLabs agent id configured for "${fn}". Set it on the company in the Admin console, or set ELEVENLABS_AGENT_ID_${fn.toUpperCase()}.`,

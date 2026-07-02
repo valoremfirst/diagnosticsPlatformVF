@@ -13,20 +13,27 @@ const AGENTS: Record<
     rim: string;
     halo: string;
     accent: string;
+    /** Inner aurora blobs that drift inside the glass. */
+    swirlA: string;
+    swirlB: string;
+    ember: string;
   }
 > = {
   george: {
     // Molten amber-orange glass — the ValoremFirst signature.
     coreStops: [
-      { offset: 0, color: "#FFC978" },
-      { offset: 0.4, color: "#F5852A" },
-      { offset: 0.72, color: "#C94D0E" },
-      { offset: 1.0, color: "#5F2404" },
+      { offset: 0, color: "#FFD592" },
+      { offset: 0.38, color: "#F5852A" },
+      { offset: 0.7, color: "#C94D0E" },
+      { offset: 1.0, color: "#571F03" },
     ],
-    highlight: "rgba(255,244,220,0.85)",
+    highlight: "rgba(255,246,224,0.9)",
     rim: "rgba(255,178,90,0.9)",
     halo: "rgba(245,133,42,0.42)",
     accent: "#F5852A",
+    swirlA: "rgba(255,205,130,0.5)",
+    swirlB: "rgba(140,40,4,0.55)",
+    ember: "rgba(255,230,180,0.55)",
   },
   margot: {
     coreStops: [
@@ -39,6 +46,9 @@ const AGENTS: Record<
     rim: "rgba(255,196,110,0.85)",
     halo: "rgba(232,160,64,0.36)",
     accent: "#E89A3C",
+    swirlA: "rgba(255,214,150,0.45)",
+    swirlB: "rgba(120,58,10,0.5)",
+    ember: "rgba(255,236,196,0.5)",
   },
   iain: {
     coreStops: [
@@ -50,6 +60,9 @@ const AGENTS: Record<
     rim: "rgba(140,158,220,0.8)",
     halo: "rgba(92,111,168,0.34)",
     accent: "#5C6FA8",
+    swirlA: "rgba(160,180,240,0.45)",
+    swirlB: "rgba(20,30,70,0.55)",
+    ember: "rgba(210,222,255,0.5)",
   },
   priya: {
     coreStops: [
@@ -61,6 +74,9 @@ const AGENTS: Record<
     rim: "rgba(140,210,180,0.8)",
     halo: "rgba(122,184,154,0.32)",
     accent: "#7AB89A",
+    swirlA: "rgba(170,230,200,0.45)",
+    swirlB: "rgba(12,45,32,0.55)",
+    ember: "rgba(220,250,238,0.5)",
   },
 };
 
@@ -81,6 +97,9 @@ const ORB_KEYFRAMES = `
   @keyframes orb-ripple-in { 0%{transform:scale(1.7);opacity:0} 35%{opacity:.4} 100%{transform:scale(.92);opacity:0} }
   @keyframes orb-orbit { from{transform:rotate(0)} to{transform:rotate(360deg)} }
   @keyframes sheen-drift { 0%,100%{opacity:.5} 50%{opacity:.85} }
+  @keyframes orb-swirl { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+  @keyframes orb-swirl-rev { from{transform:rotate(360deg)} to{transform:rotate(0)} }
+  @keyframes ember-pulse { 0%,100%{opacity:.35;transform:scale(.92)} 50%{opacity:.7;transform:scale(1.06)} }
 `;
 
 export function Orb({
@@ -172,6 +191,9 @@ export function Orb({
       : "halo-idle 4800ms cubic-bezier(.4,0,.2,1) infinite";
 
   const haloOpacity = state === "thinking" ? 0.5 : state === "error" ? 0.3 : 0.9;
+
+  // The inner aurora churns faster while thinking, drifts gently otherwise.
+  const swirlDur = state === "thinking" ? "6s" : "16s";
 
   return (
     <div
@@ -275,9 +297,70 @@ export function Orb({
             <stop offset="82%" stopColor="transparent" />
             <stop offset="100%" stopColor="rgba(50,18,2,0.45)" />
           </radialGradient>
+          {/* Molten ember core */}
+          <radialGradient id={`ember-${id}`} cx="50%" cy="58%" r="34%">
+            <stop offset="0%" stopColor={a.ember} />
+            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+          </radialGradient>
+          {/* Everything painted inside the sphere stays inside the sphere */}
+          <clipPath id={`clip-${id}`}>
+            <circle cx="50" cy="50" r="49" />
+          </clipPath>
+          <filter id={`blur-${id}`} x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="5" />
+          </filter>
         </defs>
 
         <circle cx="50" cy="50" r="49" fill={`url(#core-${id})`} />
+
+        {/* Inner aurora — two blurred blobs slowly counter-rotating inside the
+            glass, like liquid catching the light. */}
+        <g clipPath={`url(#clip-${id})`}>
+          <g
+            style={{
+              animation: `orb-swirl ${swirlDur} linear infinite`,
+              transformOrigin: "50px 50px",
+            }}
+          >
+            <ellipse
+              cx="34"
+              cy="62"
+              rx="30"
+              ry="17"
+              fill={a.swirlA}
+              filter={`url(#blur-${id})`}
+              style={{ mixBlendMode: "screen" }}
+            />
+          </g>
+          <g
+            style={{
+              animation: `orb-swirl-rev ${swirlDur === "6s" ? "9s" : "22s"} linear infinite`,
+              transformOrigin: "50px 50px",
+            }}
+          >
+            <ellipse
+              cx="66"
+              cy="42"
+              rx="26"
+              ry="15"
+              fill={a.swirlB}
+              filter={`url(#blur-${id})`}
+              style={{ mixBlendMode: "multiply" }}
+            />
+          </g>
+          {/* Ember glow pulsing at the heart of the sphere */}
+          <circle
+            cx="50"
+            cy="56"
+            r="22"
+            fill={`url(#ember-${id})`}
+            style={{
+              animation: "ember-pulse 4200ms ease-in-out infinite",
+              transformOrigin: "50px 56px",
+            }}
+          />
+        </g>
+
         <circle cx="50" cy="50" r="49" fill={`url(#rim-${id})`} />
         <circle cx="50" cy="50" r="49" fill={`url(#hl-${id})`} />
 
@@ -290,6 +373,17 @@ export function Orb({
           ry="16"
           fill="rgba(255,255,255,0.35)"
           style={{ mixBlendMode: "screen", animation: "sheen-drift 5200ms ease-in-out infinite" }}
+        />
+
+        {/* Slim secondary bounce-light at the lower right, like light bending
+            through the glass onto the far edge. */}
+        <path
+          d="M 78 68 A 34 34 0 0 1 62 84"
+          fill="none"
+          stroke={a.highlight}
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          opacity="0.35"
         />
 
         <circle cx="50" cy="50" r="49" fill={`url(#spec-${id})`} />

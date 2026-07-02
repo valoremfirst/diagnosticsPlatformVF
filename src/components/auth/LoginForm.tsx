@@ -149,7 +149,7 @@ export function LoginForm() {
               margin: "16px 0 0",
             }}
           >
-            Welcome back
+            Sign In
           </h1>
           <div style={{ width: 52, height: 1, background: C.orange, margin: "22px auto 0", opacity: 0.85 }} />
           <p

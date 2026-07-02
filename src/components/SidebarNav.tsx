@@ -4,7 +4,6 @@ import { History, LayoutGrid, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { SignOutButton } from "@/components/auth/SignOutButton";
 import type { UserRole } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -129,9 +128,6 @@ export function SidebarNav({
             </div>
             <div className="text-xs capitalize text-ink-muted">{role}</div>
           </div>
-        </div>
-        <div className="mt-3">
-          <SignOutButton className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-line bg-surface px-3 text-sm font-medium text-ink-soft transition-colors hover:border-ink-faint disabled:opacity-60" />
         </div>
       </div>
     </aside>

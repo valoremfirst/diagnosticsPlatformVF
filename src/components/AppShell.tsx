@@ -57,7 +57,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
         user={{ email: user.email }}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar />
+        <TopBar user={{ email: user.email, role: user.role }} />
         <main className="flex-1 px-6 py-8 lg:px-8">
           <div className="mx-auto w-full max-w-[1180px]">{children}</div>
         </main>
