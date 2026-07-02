@@ -3,6 +3,7 @@ import * as fs from "./firebase-repo";
 import { MOCK_COMPANIES, MOCK_SESSIONS } from "./mock-data";
 import type {
   AppUser,
+  ClientPhoneMapping,
   Company,
   DiagnosticFunction,
   DiagnosticResult,
@@ -30,6 +31,8 @@ declare global {
   var __companyStore: Map<string, Company> | undefined;
   // eslint-disable-next-line no-var
   var __userStore: Map<string, AppUser> | undefined;
+  // eslint-disable-next-line no-var
+  var __phoneStore: Map<string, ClientPhoneMapping> | undefined;
 }
 
 function db(): Map<string, DiagnosticSession> {
@@ -60,6 +63,13 @@ function userDb(): Map<string, AppUser> {
     globalThis.__userStore = new Map<string, AppUser>();
   }
   return globalThis.__userStore;
+}
+
+function phoneDb(): Map<string, ClientPhoneMapping> {
+  if (!globalThis.__phoneStore) {
+    globalThis.__phoneStore = new Map<string, ClientPhoneMapping>();
+  }
+  return globalThis.__phoneStore;
 }
 
 // Set to true if a live Firestore call fails (e.g. API not yet enabled).
@@ -233,6 +243,30 @@ export async function getCompany(id: string): Promise<Company | undefined> {
     () => fs.getCompany(id),
     () => companyDb().get(id),
   );
+}
+
+/**
+ * Resolve the company + function that owns a given ElevenLabs agent id. Used by
+ * the conversation-initiation webhook to identify which client is calling (each
+ * company runs its own per-function agents via `Company.agentIds`). Returns the
+ * first match, since an agent id maps to exactly one (company, function) pair.
+ */
+export async function findCompanyByAgentId(
+  agentId: string,
+): Promise<{ company: Company; function: DiagnosticFunction } | undefined> {
+  const target = agentId.trim();
+  if (!target) return undefined;
+  const companies = await listCompanies();
+  for (const company of companies) {
+    const entries = Object.entries(company.agentIds ?? {}) as [
+      DiagnosticFunction,
+      string,
+    ][];
+    for (const [fn, id] of entries) {
+      if (id?.trim() === target) return { company, function: fn };
+    }
+  }
+  return undefined;
 }
 
 function slugify(name: string): string {
@@ -476,6 +510,81 @@ export async function setGlobalAgentConfig(
       }
       return _memGlobalConfig;
     },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Client phone-number → company mappings
+// ---------------------------------------------------------------------------
+
+/**
+ * Normalise a phone number to a stable key: keep a leading "+" and digits only,
+ * drop spaces, dashes, brackets, etc. So "+44 (0)20 1234 5678" and
+ * "+442012345678" collapse to the same key. Returns "" for empty input.
+ */
+export function normalisePhone(raw: string): string {
+  const trimmed = (raw ?? "").trim();
+  if (!trimmed) return "";
+  const hasPlus = trimmed.startsWith("+");
+  const digits = trimmed.replace(/\D/g, "");
+  return hasPlus ? `+${digits}` : digits;
+}
+
+export async function listPhoneMappings(): Promise<ClientPhoneMapping[]> {
+  return tryFs(
+    () => fs.listPhoneMappings(),
+    () =>
+      [...phoneDb().values()].sort((a, b) =>
+        a.phoneNumber.localeCompare(b.phoneNumber),
+      ),
+  );
+}
+
+export async function getPhoneMapping(
+  phoneNumber: string,
+): Promise<ClientPhoneMapping | undefined> {
+  const key = normalisePhone(phoneNumber);
+  if (!key) return undefined;
+  return tryFs(
+    () => fs.getPhoneMapping(key),
+    () => phoneDb().get(key),
+  );
+}
+
+export async function savePhoneMapping(input: {
+  phoneNumber: string;
+  companyId: string;
+  label?: string;
+}): Promise<ClientPhoneMapping | undefined> {
+  const key = normalisePhone(input.phoneNumber);
+  if (!key) return undefined;
+  const mapping: ClientPhoneMapping = {
+    phoneNumber: key,
+    companyId: input.companyId,
+    label: input.label?.trim() || undefined,
+    createdAt: new Date().toISOString(),
+  };
+  return tryFs(
+    async () => {
+      await fs.savePhoneMapping(stripUndefined(mapping));
+      return mapping;
+    },
+    () => {
+      phoneDb().set(key, mapping);
+      return mapping;
+    },
+  );
+}
+
+export async function deletePhoneMapping(phoneNumber: string): Promise<boolean> {
+  const key = normalisePhone(phoneNumber);
+  if (!key) return false;
+  return tryFs(
+    async () => {
+      await fs.deletePhoneMapping(key);
+      return true;
+    },
+    () => phoneDb().delete(key),
   );
 }
 

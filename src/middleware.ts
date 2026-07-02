@@ -18,7 +18,11 @@ const SESSION_COOKIE = "__session";
  */
 
 // Paths reachable without a session.
-const PUBLIC_PREFIXES = ["/login", "/api/auth"];
+const PUBLIC_PREFIXES = [
+  "/login",
+  "/api/auth",
+  "/api/elevenlabs/conversation-init", // ElevenLabs webhook (server-to-server, HMAC-verified)
+];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

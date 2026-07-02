@@ -130,6 +130,21 @@ export interface Company {
   createdAt: string;
 }
 
+/**
+ * Maps an inbound phone number to a client company, so the ElevenLabs
+ * conversation-initiation webhook can attribute a call to the right client when
+ * a single shared agent is used across companies. Keyed by the normalised phone
+ * number (E.164-ish: leading "+", digits only).
+ */
+export interface ClientPhoneMapping {
+  /** Normalised phone number — also the document id. */
+  phoneNumber: string;
+  companyId: string;
+  /** Optional human label, e.g. "Jane Doe, CFO". */
+  label?: string;
+  createdAt: string;
+}
+
 export interface DiagnosticSession {
   id: string;
   /** Owning company. Optional for legacy/ad-hoc sessions. */

@@ -35,6 +35,26 @@ export function getServerAgentId(fn: DiagnosticFunction): string | undefined {
 }
 
 /**
+ * Reverse-lookup: which function does this agent id belong to, based on the
+ * env-configured defaults? Used by the conversation-init webhook to derive the
+ * function for a *shared* agent (one not tied to a specific company via
+ * `Company.agentIds`). Returns undefined when no env var matches.
+ */
+export function functionForAgentId(
+  agentId: string,
+): DiagnosticFunction | undefined {
+  const target = agentId.trim();
+  if (!target) return undefined;
+  for (const [fn, id] of Object.entries(SERVER_AGENT_ENV) as [
+    DiagnosticFunction,
+    string | undefined,
+  ][]) {
+    if (id?.trim() === target) return fn;
+  }
+  return undefined;
+}
+
+/**
  * Resolve an agent ID for a function. Priority:
  *   1. Per-company override (passed by caller)
  *   2. Global Firestore config (set in Admin → Agent configuration)

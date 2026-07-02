@@ -1,6 +1,7 @@
 import { COLLECTIONS, getDb } from "./firebase";
 import type {
   AppUser,
+  ClientPhoneMapping,
   Company,
   DiagnosticFunction,
   DiagnosticResult,
@@ -196,4 +197,42 @@ export async function updateUser(
 
 export async function deleteUser(uid: string): Promise<void> {
   await (await db()).collection(COLLECTIONS.users).doc(uid).delete();
+}
+
+// ---------------------------------------------------------------------------
+// Client phone-number → company mappings
+// ---------------------------------------------------------------------------
+
+export async function listPhoneMappings(): Promise<ClientPhoneMapping[]> {
+  const snap = await (await db()).collection(COLLECTIONS.phoneNumbers).get();
+  return snap.docs
+    .map((d) => d.data() as ClientPhoneMapping)
+    .sort((a, b) => a.phoneNumber.localeCompare(b.phoneNumber));
+}
+
+export async function getPhoneMapping(
+  phoneNumber: string,
+): Promise<ClientPhoneMapping | undefined> {
+  const doc = await (await db())
+    .collection(COLLECTIONS.phoneNumbers)
+    .doc(phoneNumber)
+    .get();
+  return doc.exists ? (doc.data() as ClientPhoneMapping) : undefined;
+}
+
+export async function savePhoneMapping(
+  mapping: ClientPhoneMapping,
+): Promise<ClientPhoneMapping> {
+  await (await db())
+    .collection(COLLECTIONS.phoneNumbers)
+    .doc(mapping.phoneNumber)
+    .set(mapping, { merge: true });
+  return mapping;
+}
+
+export async function deletePhoneMapping(phoneNumber: string): Promise<void> {
+  await (await db())
+    .collection(COLLECTIONS.phoneNumbers)
+    .doc(phoneNumber)
+    .delete();
 }
