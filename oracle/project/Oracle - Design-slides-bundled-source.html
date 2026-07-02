@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Oracle — Wireframes &amp; Designs · Slides</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<template id="__bundler_thumbnail" data-bg-color="#FAFAF7">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="orb" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#3A8794"/>
+        <stop offset="55%" stop-color="#1E4D5A"/>
+        <stop offset="100%" stop-color="#0F2C36"/>
+      </radialGradient>
+      <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="rgba(201,135,74,0.32)"/>
+        <stop offset="60%" stop-color="rgba(30,77,90,0.08)"/>
+        <stop offset="100%" stop-color="transparent"/>
+      </radialGradient>
+    </defs>
+    <rect width="1200" height="800" fill="#FAFAF7"/>
+    <circle cx="600" cy="400" r="360" fill="url(#halo)"/>
+    <circle cx="600" cy="400" r="190" fill="url(#orb)"/>
+    <text x="600" y="720" text-anchor="middle"
+      font-family="Georgia, serif" font-size="44"
+      fill="#1A1A1A" letter-spacing="-0.02em">oracle</text>
+  </svg>
+</template>
+
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  html, body { margin: 0; padding: 0; background: #1a1a1a; }
+  body { font-family: var(--font-ui); }
+  .slide, .slide * { box-sizing: border-box; }
+  .slide {
+    width: 1920px;
+    height: 1080px;
+    position: relative;
+    background: var(--color-bg);
+    overflow: hidden;
+    margin: 24px auto;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+  }
+  .slide-inner {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform-origin: center center;
+  }
+  .slide-caption {
+    position: absolute;
+    left: 56px; bottom: 32px;
+    font-family: var(--font-ui);
+    font-size: 14px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-ink-3);
+    z-index: 10;
+  }
+  .slide-folio {
+    position: absolute;
+    right: 56px; bottom: 32px;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--color-ink-3);
+    z-index: 10;
+  }
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* Cover */
+  .slide-cover {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 120px 140px;
+    background: var(--color-bg);
+  }
+  .slide-cover .wordmark {
+    font-family: var(--font-display);
+    font-size: 48px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--color-ink);
+    margin-bottom: 96px;
+  }
+  .slide-cover h1 {
+    font-family: var(--font-display);
+    font-size: 144px;
+    line-height: 0.95;
+    letter-spacing: -0.035em;
+    font-weight: 400;
+    margin: 0 0 40px;
+    color: var(--color-ink);
+  }
+  .slide-cover h1 em { font-style: italic; color: var(--color-teal); font-weight: 300; }
+  .slide-cover hr { width: 120px; height: 1px; background: var(--color-teal); border: 0; margin: 24px 0 40px; }
+  .slide-cover .lede {
+    font-family: var(--font-text);
+    font-size: 32px;
+    line-height: 1.45;
+    color: var(--color-ink-2);
+    font-style: italic;
+    font-weight: 300;
+    max-width: 900px;
+  }
+  .slide-cover .meta {
+    position: absolute; left: 140px; bottom: 96px;
+    display: flex; gap: 96px;
+    font-family: var(--font-ui);
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-ink-3);
+  }
+  .slide-cover .meta b {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 22px;
+    color: var(--color-ink);
+    text-transform: none;
+    letter-spacing: 0;
+    display: block; margin-top: 8px;
+  }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="orb.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="primitives.jsx"></script>
+<script type="text/babel" src="screens-foundations.jsx"></script>
+<script type="text/babel" src="screens-intake.jsx"></script>
+<script type="text/babel" src="screens-canvas.jsx"></script>
+<script type="text/babel" src="screens-profile.jsx"></script>
+<script type="text/babel" src="screens-boardpack.jsx"></script>
+<script type="text/babel" src="screens-states.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+(() => {
+const {
+  AB_Colors, AB_Type, AB_OrbGrid,
+  AB_Intake, AB_FirstContact,
+  AB_Canvas_Idle, AB_Canvas_Voice, AB_Canvas_Handoff, AB_Canvas_Mobile,
+  AB_Profile_Strategy, AB_Profile_Risks, AB_Risk_Expanded, AB_Profile_Opportunities, AB_Profile_Maturity,
+  AB_BoardPack_Cover, AB_BoardPack_Headline, AB_BoardPack_RiskChart,
+  AB_VF_Handoff, AB_Errors_Toast, AB_Email,
+} = window;
+
+// 1920×1080 slides. Each artboard has its own native size; scale-fit with margin.
+const SLIDE_W = 1920, SLIDE_H = 1080;
+const MARGIN = 96;        // inner safe margin
+const CAPTION_RESERVE = 96;
+const FIT_W = SLIDE_W - 2 * MARGIN;
+const FIT_H = SLIDE_H - 2 * MARGIN - CAPTION_RESERVE / 2;
+
+function Slide({ caption, folio, w, h, children }) {
+  const scale = Math.min(FIT_W / w, FIT_H / h);
+  return (
+    <div className="slide">
+      <div className="slide-inner" style={{ width: w, height: h, marginLeft: -w/2, marginTop: -h/2, transform: `scale(${scale})` }}>
+        {children}
+      </div>
+      <div className="slide-caption">{caption}</div>
+      <div className="slide-folio">{folio}</div>
+    </div>
+  );
+}
+
+function CoverSlide() {
+  return (
+    <div className="slide slide-cover">
+      <div className="wordmark">oracle</div>
+      <h1>
+        Wireframes &amp;<br/>
+        <em>designs.</em>
+      </h1>
+      <hr />
+      <div className="lede">
+        Twenty artboards across foundations, intake, the canvas, profile, the board pack, and states &amp; touchpoints.
+      </div>
+      <div className="meta">
+        <div>EDITION<b>v0.4</b></div>
+        <div>DATE<b>May 2026</b></div>
+        <div>FOR<b>The Oracle team</b></div>
+        <div>PAGES<b>21 incl. cover</b></div>
+      </div>
+    </div>
+  );
+}
+
+const PAGES = [
+  ['Foundations · Colour',          1280, 1380, AB_Colors,             '01 / 20'],
+  ['Foundations · Type',            1280, 1080, AB_Type,               '02 / 20'],
+  ['Foundations · The orb',         1280, 1320, AB_OrbGrid,            '03 / 20'],
+  ['Onboarding · Intake',           1280,  800, AB_Intake,             '04 / 20'],
+  ['Onboarding · First contact',    1280,  800, AB_FirstContact,       '05 / 20'],
+  ['Canvas · Idle',                 1280,  940, AB_Canvas_Idle,        '06 / 20'],
+  ['Canvas · Voice-active',         1280,  800, AB_Canvas_Voice,       '07 / 20'],
+  ['Canvas · Handoff',              1280,  800, AB_Canvas_Handoff,     '08 / 20'],
+  ['Canvas · Mobile',                430,  900, AB_Canvas_Mobile,      '09 / 20'],
+  ['Profile · Strategy',            1280, 1260, AB_Profile_Strategy,   '10 / 20'],
+  ['Profile · Risks',               1280, 1120, AB_Profile_Risks,      '11 / 20'],
+  ['Profile · Risk expanded',       1280,  980, AB_Risk_Expanded,      '12 / 20'],
+  ['Profile · Opportunities',       1280, 1080, AB_Profile_Opportunities, '13 / 20'],
+  ['Profile · Maturity',            1280, 1100, AB_Profile_Maturity,   '14 / 20'],
+  ['Board pack · Cover',            1280,  900, AB_BoardPack_Cover,    '15 / 20'],
+  ['Board pack · The Headline',     1280, 1700, AB_BoardPack_Headline, '16 / 20'],
+  ['Board pack · Risk slope chart', 1280, 1280, AB_BoardPack_RiskChart,'17 / 20'],
+  ['States · Valorem First handoff',1280, 1060, AB_VF_Handoff,         '18 / 20'],
+  ['States · Errors & toast',       1280, 1200, AB_Errors_Toast,       '19 / 20'],
+  ['Touchpoints · Email',           1280, 1240, AB_Email,              '20 / 20'],
+];
+
+function App() {
+  return (
+    <>
+      <CoverSlide />
+      {PAGES.map(([caption, w, h, Comp, folio], i) => (
+        <Slide key={i} caption={`ORACLE · ${caption}`} folio={folio} w={w} h={h}>
+          <Comp />
+        </Slide>
+      ))}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+})();
+</script>
+</body>
+</html>

@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { NextResponse } from "next/server";
@@ -31,28 +33,34 @@ export interface AuthedUser {
  * Resolve the current user from the session cookie, or null when unauthenticated
  * / misconfigured. Never throws — callers decide how to react.
  */
-export async function getCurrentUser(): Promise<AuthedUser | null> {
-  const cookie = cookies().get(SESSION_COOKIE)?.value;
-  if (!cookie) return null;
+// Wrapped in React.cache so a single request that touches auth in several
+// places (e.g. AppShell + the page's requireAdmin/assertCompanyAccess) only
+// verifies the session cookie once, rather than making a network round-trip to
+// Firebase per call.
+export const getCurrentUser = cache(
+  async (): Promise<AuthedUser | null> => {
+    const cookie = cookies().get(SESSION_COOKIE)?.value;
+    if (!cookie) return null;
 
-  const auth = await getAdminAuth();
-  if (!auth) return null;
+    const auth = await getAdminAuth();
+    if (!auth) return null;
 
-  try {
-    const decoded = await auth.verifySessionCookie(cookie, true);
-    const role = (decoded.role as UserRole) ?? "client";
-    return {
-      uid: decoded.uid,
-      email: decoded.email ?? "",
-      role,
-      companyId:
-        typeof decoded.companyId === "string" ? decoded.companyId : undefined,
-    };
-  } catch {
-    // Expired / revoked / malformed cookie.
-    return null;
-  }
-}
+    try {
+      const decoded = await auth.verifySessionCookie(cookie, true);
+      const role = (decoded.role as UserRole) ?? "client";
+      return {
+        uid: decoded.uid,
+        email: decoded.email ?? "",
+        role,
+        companyId:
+          typeof decoded.companyId === "string" ? decoded.companyId : undefined,
+      };
+    } catch {
+      // Expired / revoked / malformed cookie.
+      return null;
+    }
+  },
+);
 
 // ---------------------------------------------------------------------------
 // Page helpers (redirect / notFound on failure) — use inside server components.
@@ -73,7 +81,12 @@ export async function requireAdmin(): Promise<AuthedUser> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (user.role !== "admin") {
-    redirect(user.companyId ? `/companies/${user.companyId}` : "/login");
+    // Clients go to their own company. An authenticated user with neither admin
+    // rights nor a company (e.g. custom claims never set) must NOT be bounced to
+    // /login — the login page redirects authenticated users back to "/", which
+    // would create an infinite /login ↔ / redirect loop. Deny access instead.
+    if (user.companyId) redirect(`/companies/${user.companyId}`);
+    notFound();
   }
   return user;
 }

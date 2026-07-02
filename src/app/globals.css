@@ -38,13 +38,25 @@
     font-feature-settings: "ss01", "cv01";
   }
 
-  /* Serif display for headings, echoing the Oracle mock's editorial tone. */
+  /* Serif display for headings (Newsreader), echoing the Oracle editorial tone. */
   .font-display {
-    @apply font-serif tracking-tightest;
+    font-family: var(--font-display), Georgia, Cambria, serif;
+    @apply tracking-tightest;
   }
 
   ::selection {
     @apply bg-teal-tint text-teal-deep;
+  }
+
+  /* Honour reduced-motion: the orb stops breathing, chrome stops moving. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
   }
 }
 
@@ -59,6 +71,58 @@
 
   .label-eyebrow {
     @apply text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted;
+  }
+
+  /* Editorial eyebrow, slightly larger and teal-tinted for hero moments. */
+  .eyebrow {
+    @apply text-[11px] font-medium uppercase tracking-[0.14em] text-ink-muted;
+  }
+  .eyebrow-teal {
+    @apply text-teal;
+  }
+
+  /* Thin editorial divider — a short teal rule under headings. */
+  .divider-teal {
+    @apply h-px w-20 border-0 bg-teal;
+  }
+
+  /* Serif editorial body copy (Source Serif 4). */
+  .font-text {
+    font-family: var(--font-text), Georgia, Cambria, serif;
+  }
+
+  /* Warm paper texture — the calm Oracle canvas. Applied to full-bleed
+     editorial surfaces (login, hero) behind their content. */
+  .paper-texture {
+    background-color: theme("colors.canvas");
+    background-image:
+      radial-gradient(
+        ellipse 80% 50% at 30% 0%,
+        rgba(30, 77, 90, 0.03),
+        transparent 70%
+      ),
+      radial-gradient(
+        ellipse 60% 45% at 95% 100%,
+        rgba(184, 129, 74, 0.045),
+        transparent 65%
+      );
+  }
+
+  /* Liquid-glass floating surface (used sparingly for chrome that floats). */
+  .glass-standard {
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(32px) saturate(180%);
+    -webkit-backdrop-filter: blur(32px) saturate(180%);
+    border-top: 0.5px solid rgba(255, 255, 255, 0.5);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      0 8px 24px rgba(26, 26, 26, 0.06),
+      0 1px 2px rgba(26, 26, 26, 0.04);
+  }
+  @supports not (backdrop-filter: blur(20px)) {
+    .glass-standard {
+      background: rgba(255, 255, 255, 0.95);
+    }
   }
 
   /* Thin, restrained scrollbars for dense panels. */

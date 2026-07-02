@@ -18,9 +18,9 @@ Thumbs.db
 npm-debug.log*
 yarn-error.log*
 
-.vercel
-.firebase
-.runtimeconfig.json
+.firebase/
+firebase-debug.log
+.firebaserc
 
 serviceAccountKey*.json
 *-service-account.json

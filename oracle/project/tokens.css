@@ -1,0 +1,389 @@
+/* Oracle — Design tokens, per the spec.
+   The serif/sans split is the most important typographic decision. */
+
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,300;1,6..72,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Surfaces */
+  --color-bg:           #FAFAF7;
+  --color-surface:      #FFFFFF;
+  --color-surface-alt:  #F5F3EE;
+
+  /* Ink */
+  --color-ink:          #1A1A1A;
+  --color-ink-2:        #4A4A4A;
+  --color-ink-3:        #767676;
+  --color-ink-muted:    #A8A6A0;
+
+  /* Lines */
+  --color-line:         #E8E6E0;
+  --color-line-strong:  #D4D1C8;
+
+  /* Brand */
+  --color-teal:         #1E4D5A;
+  --color-teal-2:       #2E6B7A;
+  --color-teal-3:       #4A8A99;
+  --color-teal-bg:      #E8F0F2;
+
+  /* Semantic — sparingly */
+  --color-success:      #3D7A5C;
+  --color-warning:      #B8814A;
+  --color-danger:       #A84A3D;
+
+  /* Agent accents */
+  --color-george-warm:  #C9874A;
+  --color-margot-gold:  #D4A865;
+  --color-iain-indigo:  #5C6FA8;
+  --color-priya-mint:   #7AB89A;
+
+  /* Typography */
+  --font-display:  'Newsreader', 'Tiempos Headline', 'GT Sectra', Georgia, serif;
+  --font-text:     'Source Serif 4', 'Source Serif Pro', 'Tiempos Text', Georgia, serif;
+  --font-ui:       -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Söhne', system-ui, sans-serif;
+  --font-mono:     'JetBrains Mono', 'Söhne Mono', ui-monospace, monospace;
+
+  --tracking-tight:    -0.02em;
+  --tracking-normal:    0em;
+  --tracking-wide:      0.04em;
+  --tracking-wider:     0.12em;
+
+  /* Spacing — 8px base */
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* Radius */
+  --radius-xs:    2px;
+  --radius-s:     6px;
+  --radius-m:    10px;
+  --radius-l:    16px;
+  --radius-xl:   24px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-xs:    0 1px 2px rgba(26,26,26,.04);
+  --shadow-s:     0 2px 8px rgba(26,26,26,.05);
+  --shadow-m:     0 8px 24px rgba(26,26,26,.06), 0 1px 2px rgba(26,26,26,.04);
+  --shadow-l:     0 16px 48px rgba(26,26,26,.08), 0 2px 4px rgba(26,26,26,.05);
+  --shadow-xl:    0 32px 80px rgba(26,26,26,.1),  0 4px 8px rgba(26,26,26,.06);
+  --shadow-glass-inner: inset 0 1px 0 rgba(255,255,255,.6), inset 0 -1px 0 rgba(0,0,0,.04);
+
+  /* Glass */
+  --glass-subtle-bg:    rgba(250,250,247,.72);
+  --glass-standard-bg:  rgba(255,255,255,.65);
+  --glass-heavy-bg:     rgba(255,255,255,.78);
+
+  /* Motion */
+  --ease-out:      cubic-bezier(.22, 1, .36, 1);
+  --ease-in-out:   cubic-bezier(.65, 0, .35, 1);
+  --ease-organic:  cubic-bezier(.4, 0, .2, 1);
+  --dur-fast:      180ms;
+  --dur-medium:    280ms;
+  --dur-slow:      480ms;
+  --dur-glacial:  4800ms;
+}
+
+/* Utility / structural styles used across artboard screens. */
+.oracle {
+  font-family: var(--font-ui);
+  color: var(--color-ink);
+  background: var(--color-bg);
+  min-height: 100%;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  position: relative;
+}
+.oracle, .oracle * { box-sizing: border-box; }
+
+/* Paper texture — extremely subtle warm noise + linen-like crosshatch */
+.oracle::before {
+  content: "";
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 30% 0%, rgba(30, 77, 90, 0.025), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 95% 100%, rgba(184, 129, 74, 0.035), transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+}
+.oracle > * { position: relative; z-index: 1; }
+
+/* Background variant: warmer/recessed (for alternating sections) */
+.oracle-alt { background: var(--color-surface-alt); }
+.oracle-paper {
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 0%, #F8F5EE 0%, var(--color-bg) 50%, var(--color-bg) 100%);
+}
+.oracle-teal-bg {
+  background: var(--color-teal);
+  color: #FAFAF7;
+}
+.oracle-teal-bg .serif-display,
+.oracle-teal-bg .serif-text { color: inherit; }
+.oracle .serif-display { font-family: var(--font-display); letter-spacing: var(--tracking-tight); }
+.oracle .serif-text    { font-family: var(--font-text); }
+.oracle .ui            { font-family: var(--font-ui); }
+.oracle .mono          { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+.eyebrow {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  line-height: 1.3;
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--color-ink-3);
+  font-weight: 500;
+}
+.eyebrow-teal { color: var(--color-teal); }
+
+/* Primary button */
+.btn {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  padding: 12px 20px;
+  border-radius: var(--radius-s);
+  border: none;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-primary { background: var(--color-teal); color: #fff; }
+.btn-primary:hover { background: var(--color-teal-2); transform: translateY(-1px); }
+.btn-secondary { background: transparent; color: var(--color-ink-2); padding-left: 0; padding-right: 0; }
+.btn-secondary:hover { color: var(--color-ink); }
+.btn-tertiary { background: transparent; color: var(--color-ink-3); padding: 8px; border-radius: var(--radius-s); }
+.btn-tertiary:hover { background: var(--color-surface-alt); color: var(--color-ink); }
+
+/* Card of the moment */
+.cotm {
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  box-shadow: var(--shadow-m);
+  max-width: 680px;
+}
+
+/* Top nav (canvas) */
+.topnav {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-8);
+  color: var(--color-ink);
+}
+.wordmark {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  color: var(--color-ink);
+  text-transform: lowercase;
+}
+
+/* Glass surfaces */
+.glass-subtle {
+  background: var(--glass-subtle-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-top: 0.5px solid rgba(255,255,255,.6);
+  box-shadow: var(--shadow-glass-inner);
+}
+.glass-standard {
+  background: var(--glass-standard-bg);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border-top: 0.5px solid rgba(255,255,255,.5);
+  box-shadow: var(--shadow-glass-inner), var(--shadow-m);
+}
+.glass-heavy {
+  background: var(--glass-heavy-bg);
+  backdrop-filter: blur(48px) saturate(200%);
+  -webkit-backdrop-filter: blur(48px) saturate(200%);
+  border: 0.5px solid rgba(255,255,255,.45);
+  box-shadow: var(--shadow-glass-inner), var(--shadow-l);
+}
+
+/* Risk priority bar */
+.priority-bar {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; border-radius: 3px 0 0 3px;
+}
+.priority-high   { background: var(--color-danger); }
+.priority-medium { background: var(--color-warning); }
+.priority-low    { background: var(--color-ink-3); }
+
+/* Editorial divider */
+.divider-teal {
+  width: 80px; height: 1px; background: var(--color-teal); border: 0;
+}
+.divider-line {
+  width: 100%; height: 1px; background: var(--color-line); border: 0;
+}
+
+/* Drop cap */
+.dropcap::first-letter {
+  font-family: var(--font-display);
+  float: left;
+  font-size: 5.2em;
+  line-height: 0.88;
+  margin: 0.06em 0.08em 0 -0.04em;
+  color: var(--color-teal);
+  font-weight: 400;
+}
+
+/* ───────── Editorial ornaments ───────── */
+/* Oversized italic folio number — sits in margin, decorative */
+.folio {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 220px;
+  line-height: 0.78;
+  color: var(--color-teal);
+  opacity: 0.10;
+  letter-spacing: -0.04em;
+  user-select: none;
+  pointer-events: none;
+}
+.folio-small {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--color-teal);
+  letter-spacing: -0.02em;
+}
+
+/* Marginalia — column for side notes, running heads */
+.marginalia {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-ink-3);
+  font-weight: 500;
+  writing-mode: horizontal-tb;
+}
+.marginalia-vert {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+.note {
+  font-family: var(--font-text);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-ink-3);
+  font-style: italic;
+}
+
+/* Ornamental section divider */
+.ornament-rule {
+  display: flex; align-items: center; gap: 16px;
+  color: var(--color-teal); margin: 32px 0;
+}
+.ornament-rule::before,
+.ornament-rule::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-line-strong);
+}
+.ornament-rule-icon {
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--color-teal);
+}
+
+/* Magazine masthead rule — heavy + hairline */
+.masthead-rule {
+  border: 0;
+  height: 6px;
+  background: var(--color-ink);
+  margin: 0 0 4px;
+}
+.masthead-rule-hair {
+  border: 0;
+  height: 1px;
+  background: var(--color-ink);
+  margin: 0;
+}
+
+/* Focus state */
+.oracle :focus-visible {
+  outline: 2px solid var(--color-teal);
+  outline-offset: 3px;
+  border-radius: var(--radius-s);
+}
+
+/* Orb state animations — each state should read as a distinctly different mode */
+@keyframes orb-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.05); }
+}
+@keyframes orb-listening {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.005); }
+}
+@keyframes orb-speaking {
+  0%, 100% { transform: scale(1.00); }
+  35%      { transform: scale(1.06); }
+  65%      { transform: scale(1.04); }
+}
+@keyframes orb-thinking {
+  0%, 100% { transform: scale(0.96); }
+  50%      { transform: scale(1.02); }
+}
+@keyframes orb-error {
+  0%, 100% { transform: translateX(0) scale(1); }
+  20%      { transform: translateX(-2px) scale(0.99); }
+  40%      { transform: translateX(2px) scale(0.99); }
+  60%      { transform: translateX(-1px) scale(1); }
+  80%      { transform: translateX(1px) scale(1); }
+}
+/* Outward ripple — speaking; rings emanate from the orb outward */
+@keyframes orb-ripple {
+  0%   { transform: scale(0.95); opacity: .45; }
+  100% { transform: scale(1.7);  opacity: 0; }
+}
+@keyframes orb-ripple-tight {
+  0%   { transform: scale(1.0); opacity: .3; }
+  100% { transform: scale(1.45); opacity: 0; }
+}
+/* Inward ripple — listening; rings collect from outside, dissolve into the orb */
+@keyframes orb-ripple-in {
+  0%   { transform: scale(1.7); opacity: 0; }
+  35%  { opacity: .45; }
+  100% { transform: scale(0.92); opacity: 0; }
+}
+@keyframes halo-pulse {
+  0%, 100% { opacity: .65; }
+  50%      { opacity: 1; }
+}
+@keyframes halo-speak-pulse {
+  0%, 100% { opacity: .6;  transform: scale(0.96); }
+  50%      { opacity: 1.0; transform: scale(1.08); }
+}
+@keyframes orb-orbit {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes orb-think-arc {
+  0%   { stroke-dashoffset: 220; }
+  100% { stroke-dashoffset: 0; }
+}
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

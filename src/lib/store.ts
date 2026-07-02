@@ -322,6 +322,28 @@ export async function listSessionsByCompany(
   return all.filter((s) => s.companyId === companyId);
 }
 
+/** Session metadata for stats (excludes large transcript field). Used on portfolio homepage. */
+export async function listSessionsLean(): Promise<
+  Omit<DiagnosticSession, "transcript">[]
+> {
+  return tryFs(
+    () => fs.listSessions().then((s) => s.map((x) => ({ ...x, transcript: undefined as never }))),
+    () =>
+      [...db().values()].map((s) => ({ ...s, transcript: undefined as never })).sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      ),
+  );
+}
+
+/** Lean sessions by company (excludes transcript). */
+export async function listSessionsByCompanyLean(
+  companyId: string,
+): Promise<Omit<DiagnosticSession, "transcript">[]> {
+  const all = await listSessionsLean();
+  return all.filter((s) => s.companyId === companyId);
+}
+
 /** Every transcript/diagnostic uploaded to a (company, function) section. */
 export async function listSectionSessions(
   companyId: string,

@@ -54,7 +54,9 @@ const config: Config = {
           "system-ui",
           "sans-serif",
         ],
-        serif: ["Georgia", "Cambria", "Times New Roman", "serif"],
+        // Editorial body serif (Source Serif 4), display serif (Newsreader).
+        serif: ["var(--font-text)", "Georgia", "Cambria", "serif"],
+        display: ["var(--font-display)", "Georgia", "Cambria", "serif"],
       },
       borderRadius: {
         xl: "0.875rem",
@@ -78,10 +80,26 @@ const config: Config = {
           from: { opacity: "0", transform: "translateY(4px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
+        "fade-in-up": {
+          from: { opacity: "0", transform: "translateY(10px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        // Orb: slow, calm breathing (idle) and an offset halo pulse.
+        "orb-breathe": {
+          "0%, 100%": { transform: "scale(1)" },
+          "50%": { transform: "scale(1.05)" },
+        },
+        "halo-pulse": {
+          "0%, 100%": { opacity: "0.65" },
+          "50%": { opacity: "1" },
+        },
       },
       animation: {
         "pulse-ring": "pulse-ring 1.8s cubic-bezier(0.4,0,0.6,1) infinite",
         "fade-in": "fade-in 0.35s ease-out",
+        "fade-in-up": "fade-in-up 0.6s cubic-bezier(0.22,1,0.36,1) both",
+        "orb-breathe": "orb-breathe 4800ms cubic-bezier(0.4,0,0.2,1) infinite",
+        "halo-pulse": "halo-pulse 4800ms cubic-bezier(0.4,0,0.2,1) infinite",
       },
     },
   },

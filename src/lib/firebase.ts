@@ -11,10 +11,12 @@ import type { Firestore } from "firebase-admin/firestore";
  * handle plus a `firebaseEnabled()` guard so callers can degrade gracefully
  * when credentials are absent.
  *
- * Credentials (set in .env.local — never commit them):
- *   FIREBASE_PROJECT_ID
- *   FIREBASE_CLIENT_EMAIL
- *   FIREBASE_PRIVATE_KEY   (with literal \n escapes — they are unescaped below)
+ * Credentials (set in .env — never commit them). Named SA_* rather than
+ * FIREBASE_* because Firebase Functions reserves the FIREBASE_ env prefix and
+ * rejects it at deploy time:
+ *   SA_PROJECT_ID
+ *   SA_CLIENT_EMAIL
+ *   SA_PRIVATE_KEY   (with literal \n escapes — they are unescaped below)
  *
  * Alternatively set GOOGLE_APPLICATION_CREDENTIALS to a service-account JSON
  * path and the SDK will pick it up via applicationDefault().
@@ -30,14 +32,14 @@ declare global {
 // True when explicit service-account credentials are provided (local dev / Vercel).
 function hasExplicitCreds(): boolean {
   return Boolean(
-    process.env.FIREBASE_PROJECT_ID &&
-      process.env.FIREBASE_CLIENT_EMAIL &&
-      process.env.FIREBASE_PRIVATE_KEY,
+    process.env.SA_PROJECT_ID &&
+      process.env.SA_CLIENT_EMAIL &&
+      process.env.SA_PRIVATE_KEY,
   );
 }
 
 // True when running on Google Cloud (Firebase App Hosting / Cloud Run).
-// K_SERVICE is injected by Cloud Run; FIREBASE_PROJECT_ID can optionally pin the project.
+// K_SERVICE is injected by Cloud Run; SA_PROJECT_ID can optionally pin the project.
 function isGoogleCloud(): boolean {
   return Boolean(process.env.K_SERVICE || process.env.GOOGLE_CLOUD_PROJECT);
 }
@@ -66,17 +68,17 @@ export async function getAdminApp(): Promise<App | null> {
       } else if (hasExplicitCreds()) {
         globalThis.__firebaseApp = initializeApp({
           credential: cert({
-            projectId: process.env.FIREBASE_PROJECT_ID,
-            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+            projectId: process.env.SA_PROJECT_ID,
+            clientEmail: process.env.SA_CLIENT_EMAIL,
             // Vercel/CI store the key with escaped newlines.
-            privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+            privateKey: process.env.SA_PRIVATE_KEY?.replace(/\\n/g, "\n"),
           }),
         });
       } else {
         // On Firebase App Hosting / Cloud Run / Cloud Functions, use ADC.
         globalThis.__firebaseApp = initializeApp({
           credential: applicationDefault(),
-          projectId: process.env.FIREBASE_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT,
+          projectId: process.env.SA_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT,
         });
       }
     }

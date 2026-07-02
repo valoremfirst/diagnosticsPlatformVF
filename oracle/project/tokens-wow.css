@@ -1,0 +1,211 @@
+/* tokens-wow.css — "The Observatory" direction
+   Same fonts, same agents — utterly different atmosphere.
+   Deep midnight palette, dramatic light, glass everywhere.
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200;0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,500;1,8..60,400&family=JetBrains+Mono:wght@400&display=swap');
+
+:root {
+  /* Observatory atmospheric palette */
+  --w-void:          #04101A;
+  --w-deep:          #07171F;
+  --w-mid:           #0E2630;
+  --w-lift:          #163542;
+
+  /* Parchment ink — warm, antique */
+  --w-ink:           #F2EBDA;
+  --w-ink-2:         #D5CAB1;
+  --w-ink-3:         #948872;
+  --w-ink-4:         #5E5747;
+
+  /* Light — luminous teal & gold */
+  --w-teal:          #4EBCD0;
+  --w-teal-deep:     #2E7A8C;
+  --w-teal-glow:     rgba(78, 188, 208, .35);
+
+  --w-gold:          #D4A865;
+  --w-gold-glow:     rgba(212, 168, 101, .28);
+  --w-amber:         #E89B5E;
+
+  /* Risk semantic — luminous, not saturated */
+  --w-danger:        #E87060;
+  --w-warning:       #D4A865;
+  --w-success:       #6BC288;
+
+  /* Agent halo accents */
+  --w-george:        #E89B5E;
+  --w-margot:        #D4A865;
+  --w-iain:          #7B8FC4;
+  --w-priya:         #6BC2A8;
+
+  /* Glass on dark */
+  --w-glass-1:       rgba(255, 247, 230, .04);
+  --w-glass-2:       rgba(255, 247, 230, .07);
+  --w-glass-3:       rgba(255, 247, 230, .12);
+  --w-hairline:      rgba(255, 247, 230, .14);
+  --w-hairline-2:    rgba(255, 247, 230, .25);
+
+  /* Type */
+  --w-display: 'Newsreader', 'Tiempos Headline', Georgia, serif;
+  --w-text:    'Source Serif 4', 'Source Serif Pro', Georgia, serif;
+  --w-ui:      -apple-system, BlinkMacSystemFont, 'Helvetica Neue', system-ui, sans-serif;
+  --w-mono:    'JetBrains Mono', ui-monospace, monospace;
+}
+
+.wow {
+  font-family: var(--w-ui);
+  color: var(--w-ink);
+  background: var(--w-void);
+  min-height: 100%;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  position: relative;
+}
+.wow, .wow * { box-sizing: border-box; }
+
+.wow .serif-display { font-family: var(--w-display); letter-spacing: -0.025em; font-weight: 300; }
+.wow .serif-text    { font-family: var(--w-text); }
+.wow .ui            { font-family: var(--w-ui); }
+.wow .mono          { font-family: var(--w-mono); font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+
+/* Atmospheric backdrop — radial light from where the orb sits, plus a starfield */
+.wow-atmosphere {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 35%, rgba(78,188,208,.10) 0%, rgba(78,188,208,.04) 30%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 50% 95%, rgba(212,168,101,.06) 0%, transparent 70%),
+    linear-gradient(180deg, var(--w-void) 0%, var(--w-deep) 60%, var(--w-void) 100%);
+  pointer-events: none;
+}
+.wow-stars {
+  position: absolute; inset: 0; pointer-events: none; opacity: .55;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, rgba(255,247,230,.6), transparent),
+    radial-gradient(1px 1px at 27% 62%, rgba(255,247,230,.5), transparent),
+    radial-gradient(1px 1px at 42% 22%, rgba(255,247,230,.7), transparent),
+    radial-gradient(1.5px 1.5px at 58% 78%, rgba(255,247,230,.6), transparent),
+    radial-gradient(1px 1px at 71% 31%, rgba(255,247,230,.5), transparent),
+    radial-gradient(1px 1px at 84% 55%, rgba(255,247,230,.7), transparent),
+    radial-gradient(1px 1px at 93% 14%, rgba(255,247,230,.4), transparent),
+    radial-gradient(1px 1px at 8% 84%, rgba(255,247,230,.5), transparent),
+    radial-gradient(1.5px 1.5px at 48% 91%, rgba(255,247,230,.6), transparent),
+    radial-gradient(1px 1px at 63% 8%, rgba(255,247,230,.5), transparent);
+}
+
+/* Glass primitives for dark */
+.wow-glass {
+  background: var(--w-glass-1);
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  border: 0.5px solid var(--w-hairline);
+  box-shadow:
+    inset 0 1px 0 rgba(255,247,230,.06),
+    inset 0 -1px 0 rgba(0,0,0,.3),
+    0 24px 60px rgba(0,0,0,.4);
+}
+.wow-glass-heavy {
+  background: var(--w-glass-2);
+  backdrop-filter: blur(40px) saturate(160%);
+  -webkit-backdrop-filter: blur(40px) saturate(160%);
+  border: 0.5px solid var(--w-hairline-2);
+  box-shadow:
+    inset 0 1px 0 rgba(255,247,230,.1),
+    inset 0 -1px 0 rgba(0,0,0,.35),
+    0 32px 80px rgba(0,0,0,.5);
+}
+
+/* Eyebrow */
+.wow .eyebrow {
+  font-family: var(--w-ui);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--w-ink-3);
+  font-weight: 500;
+}
+.wow .eyebrow-light { color: var(--w-teal); }
+.wow .eyebrow-gold  { color: var(--w-gold); }
+
+/* Buttons */
+.wow .btn {
+  font-family: var(--w-ui);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 14px 24px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 200ms cubic-bezier(.22,1,.36,1);
+}
+.wow .btn-light {
+  background: var(--w-ink);
+  color: var(--w-void);
+  box-shadow: 0 8px 32px rgba(242,235,218,.18);
+}
+.wow .btn-light:hover { transform: translateY(-1px); box-shadow: 0 12px 40px rgba(242,235,218,.24); }
+.wow .btn-glass {
+  background: var(--w-glass-2);
+  color: var(--w-ink);
+  border: 0.5px solid var(--w-hairline-2);
+  backdrop-filter: blur(20px);
+}
+.wow .btn-glass:hover { background: var(--w-glass-3); }
+.wow .btn-ghost {
+  background: transparent; color: var(--w-ink-2); padding: 10px 16px;
+}
+.wow .btn-ghost:hover { color: var(--w-ink); }
+
+/* Drop cap — gold luminous */
+.wow .dropcap::first-letter {
+  font-family: var(--w-display);
+  float: left;
+  font-size: 5.4em;
+  line-height: 0.88;
+  margin: 0.06em 0.1em 0 -0.04em;
+  color: var(--w-gold);
+  font-weight: 300;
+  text-shadow: 0 0 30px var(--w-gold-glow);
+}
+
+/* Hairline divider */
+.wow-divider {
+  width: 100%; height: 1px; border: 0;
+  background: linear-gradient(90deg, transparent, var(--w-hairline-2), transparent);
+}
+.wow-divider-short {
+  width: 80px; height: 1px; border: 0; background: var(--w-teal);
+  box-shadow: 0 0 8px var(--w-teal-glow);
+}
+
+/* Star (for constellation) */
+.wow-star {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--w-ink);
+  box-shadow: 0 0 8px rgba(255,247,230,.6), 0 0 20px rgba(255,247,230,.3);
+}
+
+/* Constellation line */
+.wow-line {
+  position: absolute;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--w-hairline-2), transparent);
+  transform-origin: left center;
+  pointer-events: none;
+}
+
+@keyframes wow-breathe {
+  0%, 100% { transform: scale(1); opacity: .85; }
+  50%      { transform: scale(1.03); opacity: 1; }
+}
+@keyframes wow-fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes wow-twinkle {
+  0%, 100% { opacity: .4; }
+  50%      { opacity: 1; }
+}

@@ -1,13 +1,13 @@
-import { ArrowUpRight, Sparkles } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
 import { AddCompanyButton } from "@/components/company/AddCompanyButton";
-import { MetricCard } from "@/components/MetricCard";
 import { Card } from "@/components/ui/Card";
+import { Orb } from "@/components/ui/Orb";
 import { requireAdmin } from "@/lib/auth";
 import { FUNCTIONS } from "@/lib/frameworks";
 import { shade, withAlpha } from "@/lib/color";
-import { listCompanies, listSessionsByCompany } from "@/lib/store";
+import { listCompanies, listSessionsLean } from "@/lib/store";
 import { cn, MATURITY_LABEL, maturityFromScore, scoreTone } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -15,11 +15,22 @@ export const dynamic = "force-dynamic";
 export default async function OverviewPage() {
   // Portfolio view is admin-only; clients are redirected to their own company.
   await requireAdmin();
-  const companies = await listCompanies();
+  // Fetch companies and all lean sessions once, then group in memory — avoids an
+  // N+1 full-collection scan (one per company) that made this page slow.
+  const [companies, allSessions] = await Promise.all([
+    listCompanies(),
+    listSessionsLean(),
+  ]);
+  const sessionsByCompany = new Map<string, typeof allSessions>();
+  for (const s of allSessions) {
+    if (!s.companyId) continue;
+    const list = sessionsByCompany.get(s.companyId);
+    if (list) list.push(s);
+    else sessionsByCompany.set(s.companyId, [s]);
+  }
 
-  const companyStats = await Promise.all(
-    companies.map(async (c) => {
-    const sessions = await listSessionsByCompany(c.id);
+  const companyStats = companies.map((c) => {
+    const sessions = sessionsByCompany.get(c.id) ?? [];
     const completed = sessions.filter((s) => s.status === "complete" && s.result);
     const avgScore =
       completed.length > 0
@@ -38,8 +49,7 @@ export default async function OverviewPage() {
       sectionsTotal: FUNCTIONS.length,
       risks,
     };
-  }),
-  );
+  });
 
   const portfolioCompleted = companyStats.reduce(
     (a, s) => a + s.completedCount,
@@ -55,13 +65,45 @@ export default async function OverviewPage() {
       : 0;
   const portfolioRisks = companyStats.reduce((a, s) => a + s.risks, 0);
 
+  const period = new Intl.DateTimeFormat("en-GB", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date());
+
   return (
     <div className="animate-fade-in">
 
+      {/* Editorial masthead */}
+      <section className="mb-12 flex items-start justify-between gap-8">
+        <div className="animate-fade-in-up">
+          <div className="eyebrow eyebrow-teal">Portfolio · {period}</div>
+          <h1 className="mt-4 max-w-xl font-display text-4xl font-normal leading-[1.08] text-ink sm:text-[2.75rem]">
+            Where the portfolio stands
+          </h1>
+          <hr className="divider-teal mt-6" />
+          <p className="font-text mt-6 max-w-lg text-[17px] leading-relaxed text-ink-soft">
+            {companies.length} {companies.length === 1 ? "company" : "companies"}{" "}
+            under diagnosis across the practice — maturity, sections scored and
+            open risks, at a glance.
+          </p>
+        </div>
+        <div className="hidden shrink-0 pt-2 lg:block">
+          <Orb agent="george" size={104} />
+        </div>
+      </section>
+
+      {/* Portfolio KPI strip */}
+      <section className="mb-12 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line lg:grid-cols-4">
+        <Kpi label="Portfolio maturity" value={portfolioAvg} suffix="/100" hint="avg across companies" />
+        <Kpi label="Companies" value={companies.length} hint="on the platform" />
+        <Kpi label="Diagnostics scored" value={portfolioCompleted} hint="completed sections" />
+        <Kpi label="Open risks" value={portfolioRisks} hint="across portfolio" />
+      </section>
+
       {/* Company cards */}
       <section className="mb-8">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-display text-xl text-ink">All Companies</h2>
+        <div className="mb-4 flex items-center justify-between">
+          <div className="eyebrow">All companies</div>
           <AddCompanyButton />
         </div>
         <div className="grid gap-5 sm:grid-cols-2">
@@ -129,34 +171,6 @@ export default async function OverviewPage() {
         </div>
       </section>
 
-      {/* Portfolio KPIs */}
-      <section className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard
-          label="Portfolio maturity"
-          value={portfolioAvg}
-          suffix="/100"
-          hint="avg across companies"
-        />
-        <MetricCard
-          label="Companies"
-          value={companies.length}
-          hint="on the platform"
-          accent="ink"
-        />
-        <MetricCard
-          label="Diagnostics scored"
-          value={portfolioCompleted}
-          hint="completed sections"
-          accent="positive"
-        />
-        <MetricCard
-          label="Open risks"
-          value={portfolioRisks}
-          hint="across portfolio"
-          accent="gold"
-        />
-      </section>
-
       {/* Maturity legend */}
       <section>
         <Card className="px-6 py-4">
@@ -177,6 +191,32 @@ export default async function OverviewPage() {
           </div>
         </Card>
       </section>
+    </div>
+  );
+}
+
+/** Editorial KPI cell — sits in the hairline-divided portfolio strip. */
+function Kpi({
+  label,
+  value,
+  suffix,
+  hint,
+}: {
+  label: string;
+  value: number;
+  suffix?: string;
+  hint: string;
+}) {
+  return (
+    <div className="bg-surface px-5 py-6">
+      <div className="label-eyebrow">{label}</div>
+      <div className="mt-2 font-display text-3xl leading-none text-ink">
+        {value}
+        {suffix && (
+          <span className="text-lg text-ink-faint">{suffix}</span>
+        )}
+      </div>
+      <div className="mt-1.5 text-xs text-ink-muted">{hint}</div>
     </div>
   );
 }

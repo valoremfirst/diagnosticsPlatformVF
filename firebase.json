@@ -2,7 +2,8 @@
   "hosting": {
     "source": ".",
     "frameworksBackend": {
-      "region": "europe-west4"
+      "region": "europe-west4",
+      "timeoutSeconds": 60
     },
     "ignore": [
       "firebase.json",

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Oracle — The Observatory</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="tokens-wow.css" />
+<style>
+  html, body { margin: 0; height: 100%; background: #04101A; }
+  body { font-family: var(--w-ui); color: var(--w-ink); }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="orb-wow.jsx"></script>
+<script type="text/babel" src="wow-screens-1.jsx"></script>
+<script type="text/babel" src="wow-screens-2.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+(() => {
+const {
+  DesignCanvas, DCSection, DCArtboard,
+  WOW_Thesis, WOW_Hero, WOW_Voice, WOW_Constellation, WOW_Agents, WOW_BoardCover, WOW_BoardSpread,
+  useTweaks, TweaksPanel, TweakSection, TweakColor,
+} = window;
+
+const ACCENTS = {
+  gold:   { hex: '#D4A865', rgb: '212,168,101', label: 'Gold' },
+  coral:  { hex: '#E89B7E', rgb: '232,155,126', label: 'Coral' },
+  lilac:  { hex: '#B8A5D9', rgb: '184,165,217', label: 'Lilac' },
+  sage:   { hex: '#9FC4A2', rgb: '159,196,162', label: 'Sage' },
+  ice:    { hex: '#8FC8E0', rgb: '143,200,224', label: 'Ice' },
+  rose:   { hex: '#E8A0B5', rgb: '232,160,181', label: 'Rose' },
+};
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "gold"
+}/*EDITMODE-END*/;
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const a = ACCENTS[t.accent] || ACCENTS.gold;
+
+  React.useEffect(() => {
+    const r = document.documentElement.style;
+    r.setProperty('--w-gold', a.hex);
+    r.setProperty('--w-gold-glow', `rgba(${a.rgb}, .28)`);
+  }, [t.accent]);
+
+  // Map option hex -> ACCENTS key
+  const hexToKey = Object.fromEntries(Object.entries(ACCENTS).map(([k, v]) => [v.hex, k]));
+
+  return (
+    <>
+      <DesignCanvas>
+        <DCSection id="thesis" title="The Observatory" subtitle="A bolder direction — same orb, deeper world">
+          <DCArtboard id="thesis" label="00 · The thesis" width={1280} height={940}>
+            <WOW_Thesis />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="canvas" title="The Canvas" subtitle="Atmospheric · luminous · spatial">
+          <DCArtboard id="hero" label="01 · Hero · the orb as the room" width={1280} height={1060}>
+            <WOW_Hero />
+          </DCArtboard>
+          <DCArtboard id="voice" label="02 · Voice-active · Iain speaking" width={1280} height={980}>
+            <WOW_Voice />
+          </DCArtboard>
+          <DCArtboard id="agents" label="03 · Your advisors · the four orbs" width={1280} height={960}>
+            <WOW_Agents />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="risks" title="The risk sky" subtitle="A constellation, not a scatter plot">
+          <DCArtboard id="constellation" label="04 · Risk constellation" width={1280} height={920}>
+            <WOW_Constellation />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="board" title="The Board Pack" subtitle="A film, opening">
+          <DCArtboard id="board-cover" label="05 · Cover · cinematic" width={1280} height={1120}>
+            <WOW_BoardCover />
+          </DCArtboard>
+          <DCArtboard id="board-spread" label="06 · Interior spread · The Headline" width={1280} height={1500}>
+            <WOW_BoardSpread />
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+
+      <TweaksPanel title="Accent">
+        <TweakSection label="Light & ornament" />
+        <TweakColor
+          label="Accent colour"
+          value={a.hex}
+          options={Object.values(ACCENTS).map(x => x.hex)}
+          onChange={(hex) => setTweak('accent', hexToKey[hex] || 'gold')}
+        />
+        <div style={{ padding: '10px 14px 4px', fontSize: 11, color: '#888', lineHeight: 1.5, fontStyle: 'italic' }}>
+          Drives the drop cap, italic display words, pull-quote marks, the timeline glow on the board pack, and a few small flourishes.
+        </div>
+      </TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+})();
+</script>
+</body>
+</html>

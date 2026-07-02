@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Oracle — Wireframes &amp; Designs</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  html, body { margin: 0; height: 100%; background: #FAFAF7; }
+  body { font-family: var(--font-ui); color: var(--color-ink); }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="orb.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="primitives.jsx"></script>
+<script type="text/babel" src="screens-foundations.jsx"></script>
+<script type="text/babel" src="screens-intake.jsx"></script>
+<script type="text/babel" src="screens-canvas.jsx"></script>
+<script type="text/babel" src="screens-profile.jsx"></script>
+<script type="text/babel" src="screens-boardpack.jsx"></script>
+<script type="text/babel" src="screens-states.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+(() => {
+const {
+  DesignCanvas, DCSection, DCArtboard, DCPostIt,
+  AB_Colors, AB_Type, AB_OrbGrid,
+  AB_Intake, AB_FirstContact,
+  AB_Canvas_Idle, AB_Canvas_Voice, AB_Canvas_Handoff, AB_Canvas_Mobile,
+  AB_Profile_Strategy, AB_Profile_Risks, AB_Risk_Expanded, AB_Profile_Opportunities, AB_Profile_Maturity,
+  AB_BoardPack_Cover, AB_BoardPack_Headline, AB_BoardPack_RiskChart,
+  AB_VF_Handoff, AB_Errors_Toast, AB_Email,
+} = window;
+
+function ManifestoCard() {
+  return (
+    <div className="oracle" style={{ width: 880, padding: '64px 72px', background: 'var(--color-bg)' }}>
+      <div className="wordmark" style={{ fontSize: 28, marginBottom: 56 }}>oracle</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12 }}>
+        <span className="serif-display" style={{ fontSize: 16, color: 'var(--color-teal)', fontStyle: 'italic' }}>00</span>
+        <div className="eyebrow eyebrow-teal">DESIGN INTENT · A NOTE BEFORE THE SCREENS</div>
+      </div>
+      <h1 className="serif-display" style={{ fontSize: 52, fontWeight: 400, lineHeight: 1.08, letterSpacing: '-0.025em', margin: '0 0 24px' }}>
+        A wise voice you trust, in the room with you.
+      </h1>
+      <hr className="divider-teal" style={{ margin: '0 0 32px' }} />
+      <p className="serif-text dropcap" style={{ fontSize: 20, lineHeight: 1.65, color: 'var(--color-ink)', margin: '0 0 22px' }}>
+        Oracle is not an app, a dashboard, or a chatbot. Owners of small businesses are time-starved, decision-saturated, and often deeply lonely — they need a wise voice they trust, not another interface to learn. Every design decision in this set follows from that single sentence.
+      </p>
+      <p className="serif-text" style={{ fontSize: 18, lineHeight: 1.6, color: 'var(--color-ink-2)', margin: '0 0 18px' }}>
+        The visual register is editorial — the unhurried confidence of <em>Monocle</em>, <em>The Economist</em>, and a private-bank quarterly. Newsreader for headlines, Source Serif for body, system sans only for chrome. Warm off-white surfaces. Teal rationed; semantic colour reserved for the risk register. White space treated as a status symbol, not a layout failure.
+      </p>
+      <p className="serif-text" style={{ fontSize: 18, lineHeight: 1.6, color: 'var(--color-ink-2)', margin: '0 0 18px' }}>
+        The orb is the entire system distilled into one object. Layered radial gradients — halo, core, inner highlight, specular ring — read as a real luminous sphere, not a circle with a fill. It breathes at 4.8s when at rest. It tightens to 1.2s when listening. It desaturates when something has gone wrong. Four agent variants (George warm, Margot gold, Iain indigo, Priya mint) give each advisor a recognisable presence without changing the underlying form.
+      </p>
+      <p className="serif-text" style={{ fontSize: 18, lineHeight: 1.6, color: 'var(--color-ink-2)', margin: '0 0 18px' }}>
+        Below: foundations, the intake, the canvas, the four profile screens, the board pack as a quietly significant magazine, and the states most products get wrong. Each artboard is sized at production scale (1280 desktop, 390 mobile). You can pan, zoom, reorder, focus.
+      </p>
+      <p className="serif-text" style={{ fontSize: 18, lineHeight: 1.6, color: 'var(--color-ink-3)', margin: 0, fontStyle: 'italic' }}>
+        Read sequentially or skip ahead. The system is the same in both directions.
+      </p>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection id="intent" title="Design intent" subtitle="The single sentence everything follows from">
+        <DCArtboard id="manifesto" label="The thinking" width={880} height={1080}>
+          <ManifestoCard />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="foundations" title="Foundations" subtitle="Colour · type · the orb">
+        <DCArtboard id="colors" label="01 · Colour" width={1280} height={1380}>
+          <AB_Colors />
+        </DCArtboard>
+        <DCArtboard id="type" label="02 · Type" width={1280} height={1080}>
+          <AB_Type />
+        </DCArtboard>
+        <DCArtboard id="orb" label="03 · The orb · 4 agents × 5 states" width={1280} height={1320}>
+          <AB_OrbGrid />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="onboarding" title="Intake &amp; first contact" subtitle="One question per screen · then meet George">
+        <DCArtboard id="intake" label="04 · Intake question" width={1280} height={800}>
+          <AB_Intake />
+        </DCArtboard>
+        <DCArtboard id="first-contact" label="05 · First contact" width={1280} height={800}>
+          <AB_FirstContact />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="canvas" title="The Canvas" subtitle="Home · idle · voice-active · handoff · mobile">
+        <DCArtboard id="canvas-idle" label="06 · Canvas · idle with Card of the Moment" width={1280} height={940}>
+          <AB_Canvas_Idle />
+        </DCArtboard>
+        <DCArtboard id="canvas-voice" label="07 · Voice-active · Iain speaking · risk being added in periphery" width={1280} height={800}>
+          <AB_Canvas_Voice />
+        </DCArtboard>
+        <DCArtboard id="canvas-handoff" label="08 · Agent handoff · George to Margot" width={1280} height={800}>
+          <AB_Canvas_Handoff />
+        </DCArtboard>
+        <DCArtboard id="canvas-mobile" label="09 · Mobile · iOS" width={430} height={900}>
+          <AB_Canvas_Mobile />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="profile" title="Profile" subtitle="Strategy · Risks · Opportunities · Maturity">
+        <DCArtboard id="strategy" label="10 · Strategy · 4 objectives" width={1280} height={1260}>
+          <AB_Profile_Strategy />
+        </DCArtboard>
+        <DCArtboard id="risks" label="11 · Risks · map &amp; top three" width={1280} height={1120}>
+          <AB_Profile_Risks />
+        </DCArtboard>
+        <DCArtboard id="risk-expanded" label="12 · Risk expanded · side panel" width={1280} height={980}>
+          <AB_Risk_Expanded />
+        </DCArtboard>
+        <DCArtboard id="opportunities" label="13 · Opportunities · 4 open" width={1280} height={1080}>
+          <AB_Profile_Opportunities />
+        </DCArtboard>
+        <DCArtboard id="maturity" label="14 · Maturity · radar with quarter-on-quarter" width={1280} height={1100}>
+          <AB_Profile_Maturity />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="board-pack" title="The Board Pack" subtitle="A monthly read · cover · narrative · exhibit">
+        <DCArtboard id="bp-cover" label="15 · Cover · editorial masthead" width={1280} height={900}>
+          <AB_BoardPack_Cover />
+        </DCArtboard>
+        <DCArtboard id="bp-headline" label="16 · The Headline · drop cap, pull quote, walkthrough orb" width={1280} height={1700}>
+          <AB_BoardPack_Headline />
+        </DCArtboard>
+        <DCArtboard id="bp-exhibit" label="17 · Exhibit · risk slope chart" width={1280} height={1280}>
+          <AB_BoardPack_RiskChart />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="states" title="States &amp; touchpoints" subtitle="Handoff to Valorem First · errors · email">
+        <DCArtboard id="vf-handoff" label="18 · Valorem First handoff" width={1280} height={1060}>
+          <AB_VF_Handoff />
+        </DCArtboard>
+        <DCArtboard id="errors" label="19 · Errors, loading, notification toast" width={1280} height={1200}>
+          <AB_Errors_Toast />
+        </DCArtboard>
+        <DCArtboard id="email" label="20 · Transactional email · feels like a letter" width={1280} height={1240}>
+          <AB_Email />
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+})();
+</script>
+</body>
+</html>
