@@ -127,6 +127,8 @@ export interface Company {
    * auto-import resolves the agent id from here (falling back to env defaults).
    */
   agentIds?: Partial<Record<DiagnosticFunction, string>>;
+  /** ElevenLabs conversation IDs the admin has explicitly deleted — never re-imported. */
+  dismissedConversationIds?: string[];
   createdAt: string;
 }
 
@@ -155,6 +157,13 @@ export interface DiagnosticSession {
   title?: string;
   /** Source ElevenLabs conversation id, set when auto-imported (dedup key). */
   sourceConversationId?: string;
+  /**
+   * Caller's phone number (normalised) for calls imported from ElevenLabs.
+   * Used to scope agent conversation-memory per caller, so two people from the
+   * same company don't recall each other's threads. Company-wide dashboards
+   * still show every session regardless of this field.
+   */
+  sourceCallerPhone?: string;
   status: DiagnosticStatus;
   // Optional contextual metadata captured at creation.
   clientContact?: string;

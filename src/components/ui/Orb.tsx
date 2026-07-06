@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef } from "react";
 
-type OrbAgent = "george" | "margot" | "iain" | "priya";
+export type OrbAgent = "george" | "margot" | "iain" | "priya";
 export type OrbState = "idle" | "listening" | "thinking" | "error";
 
 const AGENTS: Record<

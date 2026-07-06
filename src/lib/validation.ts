@@ -37,19 +37,64 @@ function extractJson(raw: string): unknown {
   // Strip ```json ... ``` fences if present.
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const candidate = fenced ? fenced[1] : trimmed;
-  // Fall back to the outermost { ... } block.
-  const start = candidate.indexOf("{");
-  const end = candidate.lastIndexOf("}");
-  if (start === -1 || end === -1 || end <= start) {
-    throw new ResultValidationError("No JSON object found in model response.");
-  }
-  const slice = candidate.slice(start, end + 1);
+
+  // Try parsing as-is first (most common case).
   try {
-    return JSON.parse(slice);
-  } catch (err) {
-    throw new ResultValidationError(
-      `Model response was not valid JSON: ${(err as Error).message}`,
-    );
+    return JSON.parse(candidate);
+  } catch {
+    // Fallback: extract from first { to matching }, accounting for nesting.
+    const start = candidate.indexOf("{");
+    if (start === -1) {
+      throw new ResultValidationError("No JSON object found in model response.");
+    }
+
+    let depth = 0;
+    let inString = false;
+    let escapeNext = false;
+    let end = -1;
+
+    for (let i = start; i < candidate.length; i++) {
+      const ch = candidate[i];
+
+      if (escapeNext) {
+        escapeNext = false;
+        continue;
+      }
+
+      if (ch === "\\") {
+        escapeNext = true;
+        continue;
+      }
+
+      if (ch === '"' && !escapeNext) {
+        inString = !inString;
+        continue;
+      }
+
+      if (!inString) {
+        if (ch === "{") depth++;
+        else if (ch === "}") {
+          depth--;
+          if (depth === 0) {
+            end = i;
+            break;
+          }
+        }
+      }
+    }
+
+    if (end === -1) {
+      throw new ResultValidationError("No valid JSON object found in model response.");
+    }
+
+    const slice = candidate.slice(start, end + 1);
+    try {
+      return JSON.parse(slice);
+    } catch (err) {
+      throw new ResultValidationError(
+        `Model response was not valid JSON: ${(err as Error).message}`,
+      );
+    }
   }
 }
 

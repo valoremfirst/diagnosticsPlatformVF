@@ -226,6 +226,30 @@ export async function deleteSession(id: string): Promise<boolean> {
   );
 }
 
+/**
+ * After deleting a session that came from ElevenLabs, call this to add its
+ * conversationId to the company's dismissed list so auto-import never pulls it again.
+ */
+export async function dismissConversation(
+  companyId: string,
+  conversationId: string,
+): Promise<void> {
+  return tryFs(
+    () => fs.dismissConversation(companyId, conversationId),
+    () => {
+      const company = companyDb().get(companyId);
+      if (!company) return;
+      const ids = company.dismissedConversationIds ?? [];
+      if (!ids.includes(conversationId)) {
+        companyDb().set(companyId, {
+          ...company,
+          dismissedConversationIds: [...ids, conversationId],
+        });
+      }
+    },
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Companies
 // ---------------------------------------------------------------------------

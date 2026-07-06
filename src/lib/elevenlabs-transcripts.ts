@@ -75,6 +75,23 @@ export function elevenLabsApiConfigured(): boolean {
   return Boolean(process.env.ELEVENLABS_API_KEY);
 }
 
+/**
+ * Mint a short-lived signed WebSocket URL for a browser voice session with the
+ * given agent. This keeps the agent private — the ELEVENLABS_API_KEY never
+ * leaves the server; the browser only ever sees the time-limited signed URL.
+ */
+export async function getSignedUrl(agentId: string): Promise<string> {
+  const data = await apiGet<{ signed_url?: string }>(
+    `/convai/conversation/get-signed-url?agent_id=${encodeURIComponent(agentId)}`,
+  );
+  if (!data.signed_url) {
+    throw new ElevenLabsError(
+      "ElevenLabs did not return a signed URL for this agent.",
+    );
+  }
+  return data.signed_url;
+}
+
 export class ElevenLabsError extends Error {}
 
 export interface ConversationSummary {
@@ -203,10 +220,19 @@ function mapRole(role?: string): Speaker {
 /** Fetch one conversation and convert its transcript to TranscriptTurn[]. */
 export async function fetchConversationTranscript(
   conversationId: string,
-): Promise<{ turns: TranscriptTurn[]; durationSeconds: number }> {
+): Promise<{
+  turns: TranscriptTurn[];
+  durationSeconds: number;
+  callerPhone?: string;
+}> {
   const data = await apiGet<{
     transcript?: RawTranscriptEntry[];
-    metadata?: { call_duration_secs?: number; start_time_unix_secs?: number };
+    metadata?: {
+      call_duration_secs?: number;
+      start_time_unix_secs?: number;
+      phone_call?: { external_number?: string };
+    };
+    user_id?: string;
   }>(`/convai/conversations/${conversationId}`);
 
   const turns: TranscriptTurn[] = (data.transcript ?? [])
@@ -217,8 +243,16 @@ export async function fetchConversationTranscript(
       timestamp: stamp(t.time_in_call_secs ?? 0),
     }));
 
+  // The inbound caller's number lives on the phone-call metadata (Twilio/SIP).
+  // Fall back to user_id, which ElevenLabs also sets to the caller number.
+  const callerPhone =
+    data.metadata?.phone_call?.external_number?.trim() ||
+    data.user_id?.trim() ||
+    undefined;
+
   return {
     turns,
     durationSeconds: data.metadata?.call_duration_secs ?? 0,
+    callerPhone,
   };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { History, LayoutGrid, Settings2 } from "lucide-react";
+import { History, LayoutGrid, Mic, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -69,15 +69,46 @@ export function SidebarNav({
         })}
       </nav>
 
+      {/* Clients: a prominent, friendly entry point to do their interviews. */}
+      {!isAdmin && companies[0] && (
+        <nav className="mt-9 flex flex-col gap-1">
+          {(() => {
+            const href = `/companies/${companies[0].id}/interviews`;
+            const active = pathname.startsWith(href);
+            return (
+              <Link
+                href={href}
+                className={cn(
+                  "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
+                  active
+                    ? "bg-teal-tint text-teal"
+                    : "text-ink-soft hover:bg-surface-muted hover:text-ink",
+                )}
+              >
+                {active && (
+                  <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-teal" />
+                )}
+                <Mic className="h-[18px] w-[18px]" strokeWidth={active ? 2.2 : 1.8} />
+                Interviews
+              </Link>
+            );
+          })()}
+        </nav>
+      )}
+
       {/* Companies */}
-      <div className={cn(isAdmin ? "mt-7" : "mt-9")}>
+      <div className={cn(isAdmin ? "mt-7" : "mt-6")}>
         <div className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-faint">
           {isAdmin ? "Companies" : "Your company"}
         </div>
         <div className="flex flex-col gap-1">
           {companies.map((c) => {
             const href = `/companies/${c.id}`;
-            const active = pathname.startsWith(href);
+            // Active on the company dashboard, but not on its /interviews sub-page.
+            const active =
+              pathname === href ||
+              (pathname.startsWith(`${href}/`) &&
+                !pathname.startsWith(`${href}/interviews`));
             return (
               <Link
                 key={c.id}

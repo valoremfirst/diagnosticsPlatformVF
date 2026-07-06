@@ -87,6 +87,7 @@ export async function POST(
   //  - transcript (array): pre-structured turns
   let transcript: TranscriptTurn[];
   let sourceConversationId: string | undefined;
+  let sourceCallerPhone: string | undefined;
   if (typeof body.conversationId === "string" && body.conversationId.trim()) {
     sourceConversationId = body.conversationId.trim();
 
@@ -104,6 +105,7 @@ export async function POST(
     try {
       const pulled = await fetchConversationTranscript(sourceConversationId);
       transcript = pulled.turns;
+      sourceCallerPhone = pulled.callerPhone;
     } catch (err) {
       const message =
         err instanceof ElevenLabsError
@@ -157,6 +159,7 @@ export async function POST(
     title,
     transcript,
     sourceConversationId,
+    sourceCallerPhone,
     status: shouldAnalyse ? "processing" : "draft",
     selectedFrameworks: FRAMEWORKS.map((f) => f.name),
   });

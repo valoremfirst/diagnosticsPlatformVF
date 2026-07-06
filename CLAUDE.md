@@ -42,8 +42,12 @@ Access control lives in `src/lib/auth.ts` (`apiRequire*` helpers). Reads are gat
 - **`/api/elevenlabs/transcripts`** — lists completed conversations >15 min per company+function
   - Looks up company's per-function agent IDs (`Company.agentIds[fn]`), falls back to `.env` defaults
 - **`/api/companies/[id]/ask`** — grounded AI Q&A (builds context from analysed diagnostics, asks Gemini)
+- **`/api/companies/[id]/portal-call`** — POST (company access): mints a signed ElevenLabs WebSocket URL for an **in-browser** voice interview + the dynamic variables the agent prompt needs. History stays empty by design (company name only) to preserve per-caller isolation.
+- **`/api/companies/[id]/portal-call/complete`** — POST (company access): after a browser call ends, imports its transcript as a draft (`imp-{companyId}-{conversationId}`). Retries briefly while ElevenLabs finalises; returns `202 { pending }` if not ready yet. Company-scoped (not admin-only) so clients can finalise their own interview.
 - **`/api/auth/session`** — POST exchanges a Firebase ID token for a `__session` cookie; DELETE signs out
 - **`/api/admin/users` + `/[uid]`** — admin-only user provisioning (create/list, update role/company, delete)
+- **`/api/admin/phone-numbers`** — admin-only phone→company registry (GET list, POST upsert, DELETE `?phone=`); powers per-caller memory for phone interviews
+- **`/api/elevenlabs/conversation-init`** — ElevenLabs Conversation Initiation webhook (public, HMAC-verified). Identifies the caller by phone number → company, injects that caller's prior-session summary as `{{conversation_history}}`. Per-caller scoped (see `sourceCallerPhone`).
 
 ### UI Patterns
 - **Server components** for data fetching (pages, API routes)
@@ -71,7 +75,9 @@ Identity is owned by **Firebase Authentication** (email/password). Two roles: `a
 - `src/lib/elevenlabs-transcripts.ts` — lists conversations, fetches transcripts
 - Per-company agent IDs (`Company.agentIds[fn]`) override `.env` defaults
 - Conversations must have `status: "done"` to be imported
-- Each session stores `sourceConversationId` to enable idempotent dedup
+- Each session stores `sourceConversationId` to enable idempotent dedup, and `sourceCallerPhone` (from the call's phone metadata) to scope agent memory per caller
+- **In-portal calls** (`src/components/company/PortalCall.tsx`) run a live interview in the browser via `@elevenlabs/react` (`useConversation` inside `ConversationProvider`). The server mints a signed URL (`getSignedUrl` in `elevenlabs-transcripts.ts`) so the API key never reaches the browser; on hang-up the transcript imports via `/portal-call/complete`. Available to admins and the owning client.
+- **Agent memory** (`src/lib/conversation-memory.ts`) is injected two ways: phone/SIP calls hit the conversation-init webhook (identified by caller phone); browser calls pass dynamic variables directly at `startSession`. Both require the agent prompt to reference `{{client_company}}`, `{{caller_name}}`, `{{caller_phone}}`, `{{conversation_history}}` — every referenced variable must be supplied or the call fails to start.
 
 **Google Gemini:**
 - `src/lib/gemini.ts` — wrapper for analysis and Q&A

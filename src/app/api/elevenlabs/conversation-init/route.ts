@@ -10,6 +10,7 @@ import {
   getPhoneMapping,
   listSectionSessions,
   listSessionsByCompany,
+  normalisePhone,
 } from "@/lib/store";
 import type { DiagnosticFunction } from "@/lib/types";
 
@@ -135,51 +136,29 @@ export async function POST(req: Request) {
 
   console.info("[convai-init] Raw body:", rawBody);
 
-  // Identify the function and company independently.
-  //
-  // Function comes from the agent id: each per-function agent maps to exactly
-  // one function, whether it's a company-specific agent (Company.agentIds) or a
-  // shared/env agent (ELEVENLABS_AGENT_ID_*).
-  //
-  // Company is resolved by priority, most authoritative first:
-  //   1. Explicit company_id passed as client data (SDK-initiated calls).
-  //   2. The caller's phone number, looked up in the registry (real calls).
-  //   3. A company-specific agent id (only unique when NOT a shared agent).
-  //
-  // Crucially, a *shared* agent + an *unregistered* phone resolves to NO
-  // company, so a brand-new caller gets an empty history rather than inheriting
-  // another client's — the whole point of the phone registry.
+  // Resolve function from agent_id so we can scope memory to the right section.
   let fn: DiagnosticFunction | undefined;
-  let agentCompanyId: string | undefined;
-
   if (body.agent_id) {
     const match = await findCompanyByAgentId(body.agent_id);
     if (match) {
       fn = match.function;
-      agentCompanyId = match.company.id; // company-specific agent
     } else {
-      fn = functionForAgentId(body.agent_id); // shared/env agent → function only
+      fn = functionForAgentId(body.agent_id);
     }
   }
-
   const passedFn =
     body.function ?? (body.dynamic_variables?.function as string | undefined);
   if (!fn && passedFn && VALID_FUNCTIONS.includes(passedFn as DiagnosticFunction)) {
     fn = passedFn as DiagnosticFunction;
   }
 
-  // 1. Explicit company_id (SDK client data).
+  // Company is resolved by phone number only — memory is tied to the caller's
+  // registered number, not the agent. An unregistered number always gets a clean
+  // slate so callers never see each other's history.
   let companyId: string | undefined;
-  const passedCompany =
-    body.company_id ?? (body.dynamic_variables?.company_id as string | undefined);
-  if (passedCompany) {
-    const company = await getCompany(passedCompany);
-    if (company) companyId = company.id;
-  }
-
-  // 2. Caller phone number → registered company.
   let callerName: string | undefined;
-  if (!companyId && body.caller_id) {
+
+  if (body.caller_id) {
     const mapping = await getPhoneMapping(body.caller_id);
     if (mapping) {
       companyId = mapping.companyId;
@@ -187,15 +166,11 @@ export async function POST(req: Request) {
     }
   }
 
-  // 3. Company-specific agent id.
-  if (!companyId) companyId = agentCompanyId;
-
-  // Unknown caller — respond gracefully so the conversation still starts, but
-  // with NO history (avoids leaking another client's context).
+  // No registered phone — start fresh. Call still connects, just no history.
   if (!companyId) {
-    console.warn(
-      `[convai-init] Unresolved caller — agent_id="${body.agent_id ?? ""}", ` +
-        `caller_id="${body.caller_id ?? ""}". Returning empty history.`,
+    console.info(
+      `[convai-init] Unregistered caller — phone="${body.caller_id ?? ""}", ` +
+        `agent_id="${body.agent_id ?? ""}". Returning empty history.`,
     );
     return emptyResponse();
   }
@@ -206,9 +181,19 @@ export async function POST(req: Request) {
   try {
     // Scope memory to this agent's function when known; otherwise fall back to
     // the whole company so cross-function history is still available.
-    const priorSessions = fn
+    const companySessions = fn
       ? await listSectionSessions(companyId, fn)
       : await listSessionsByCompany(companyId);
+
+    // Per-caller memory: only recall sessions from THIS phone number, so two
+    // people at the same company never see each other's threads. (The platform
+    // dashboards still show every session — this filter is agent-memory only.)
+    const callerKey = normalisePhone(body.caller_id ?? "");
+    const priorSessions = companySessions.filter(
+      (s) =>
+        s.sourceCallerPhone &&
+        normalisePhone(s.sourceCallerPhone) === callerKey,
+    );
 
     const memory = buildConversationMemory(priorSessions);
 

@@ -108,13 +108,29 @@ ElevenLabs sends as `caller_id` (E.164, e.g. `+442012345678`).
 
 ## 4. What the agent remembers
 
-`buildConversationMemory()` takes the client's prior sessions (scoped to the
+Memory is scoped **per caller**, not per company. When someone calls, the webhook
+recalls only the sessions where they were the caller — matched on their phone
+number (`caller_id` ↔ the session's `sourceCallerPhone`, both normalised). So two
+people at the same company each get their own continuous thread and never hear
+each other's conversations back.
+
+> The platform **dashboards still show every session** for a company — the full
+> multi-person picture is intact for consultants. Per-caller scoping applies only
+> to what the live agent recalls mid-call.
+>
+> `sourceCallerPhone` is captured automatically on import from the ElevenLabs
+> conversation's phone metadata. Sessions imported before this existed (or pasted
+> in manually with no caller number) simply won't surface in any caller's agent
+> memory — they remain visible in the dashboard.
+
+`buildConversationMemory()` takes that caller's prior sessions (scoped to the
 agent's function when known, else the whole company), newest first, and produces
 a compact brief. Per session it prefers the **analysed result** — overall
 maturity score, executive summary, and top risks — over raw transcript text,
 because that's denser per token and closer to what a human consultant would
 recall. When a session hasn't been scored yet, it falls back to a trimmed slice
-of the transcript.
+of the transcript. The whole brief is hard-capped (~1,800 chars) to stay within
+ElevenLabs' dynamic-variable limits.
 
 Tunables live at the top of `src/lib/conversation-memory.ts`:
 

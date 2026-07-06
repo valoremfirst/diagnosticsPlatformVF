@@ -261,10 +261,12 @@ export function SectionDetail({
       <div className="grid gap-5 p-6 lg:grid-cols-5">
         {/* Left: transcripts + add */}
         <div className="lg:col-span-3">
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-sm font-semibold text-ink">Transcripts</h3>
-            <div className={cn("flex items-center gap-2", readOnly && "hidden")}>
-              {pending.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              {!readOnly && (
+                <>
+                  {pending.length > 0 && (
                 <button
                   type="button"
                   onClick={analyseAllPending}
@@ -299,16 +301,18 @@ export function SectionDetail({
                     ? "Sync failed"
                     : "Auto-synced"}
               </span>
-              {!adding && (
-                <button
-                  type="button"
-                  onClick={() => setAdding(true)}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold text-white transition-opacity hover:opacity-90"
-                  style={{ background: brand }}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add transcript
-                </button>
+                  {!adding && (
+                    <button
+                      type="button"
+                      onClick={() => setAdding(true)}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                      style={{ background: brand }}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Add transcript
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>

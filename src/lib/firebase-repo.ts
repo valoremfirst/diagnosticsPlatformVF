@@ -90,6 +90,17 @@ export async function updateCompany(
   return saveCompany(next);
 }
 
+export async function dismissConversation(
+  companyId: string,
+  conversationId: string,
+): Promise<void> {
+  const { FieldValue } = await import("firebase-admin/firestore");
+  await (await db())
+    .collection(COLLECTIONS.companies)
+    .doc(companyId)
+    .update({ dismissedConversationIds: FieldValue.arrayUnion(conversationId) });
+}
+
 // ---------------------------------------------------------------------------
 // Diagnostic sessions
 // ---------------------------------------------------------------------------

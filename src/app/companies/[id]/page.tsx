@@ -58,9 +58,12 @@ export default async function CompanyPage({
       avgScore: avg,
       maturity: avg != null ? maturityFromScore(avg) : null,
       frameworks,
-      importedConversationIds: own
-        .map((s) => s.sourceConversationId)
-        .filter((id): id is string => typeof id === "string"),
+      importedConversationIds: [
+        ...own
+          .map((s) => s.sourceConversationId)
+          .filter((id): id is string => typeof id === "string"),
+        ...(company.dismissedConversationIds ?? []),
+      ],
       transcripts: own.map((s) => ({
         sessionId: s.id,
         title: s.title ?? "Untitled transcript",
