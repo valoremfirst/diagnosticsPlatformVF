@@ -1,19 +1,21 @@
 import { NextResponse } from "next/server";
 
 import { apiRequireCompanyAccess } from "@/lib/auth";
+import { buildCompanyBrief } from "@/lib/conversation-memory";
 import {
   elevenLabsApiConfigured,
   ElevenLabsError,
   getSignedUrl,
   resolveAgentId,
 } from "@/lib/elevenlabs-transcripts";
-import { getCompany } from "@/lib/store";
+import { getCompany, listSessionsByCompany } from "@/lib/store";
 import type { DiagnosticFunction } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const VALID_FUNCTIONS: DiagnosticFunction[] = [
+  "finance",
   "legal",
   "it",
   "operational-delivery",
@@ -70,7 +72,7 @@ export async function POST(
     return NextResponse.json({ error: "Company not found." }, { status: 404 });
   }
 
-  const agentId = await resolveAgentId(fn, company.agentIds?.[fn]);
+  const agentId = await resolveAgentId(fn);
   if (!agentId) {
     return NextResponse.json(
       {
@@ -80,18 +82,36 @@ export async function POST(
     );
   }
 
+  // Build the client's history brief. A browser session has no caller phone, so
+  // zone 1 covers all of this company's interviews in the function (not
+  // per-caller) — the company is already established by the authenticated route.
+  let conversationHistory = "";
+  try {
+    const allSessions = await listSessionsByCompany(params.id);
+    const functionSessions = allSessions.filter((s) => s.function === fn);
+    conversationHistory = buildCompanyBrief({
+      companyName: company.name,
+      fn,
+      functionSessions,
+      allSessions,
+    });
+  } catch {
+    // Never block the call on memory — start cold if the brief can't be built.
+    conversationHistory = "";
+  }
+
   try {
     const signedUrl = await getSignedUrl(agentId);
     return NextResponse.json({
       signedUrl,
       agentId,
       // The agent prompt references these; every one must be supplied or the
-      // conversation fails to start. History stays empty by design.
+      // conversation fails to start.
       dynamicVariables: {
         client_company: company.name,
         caller_name: gate.user.email ?? "",
         caller_phone: "",
-        conversation_history: "",
+        conversation_history: conversationHistory,
       },
     });
   } catch (err) {

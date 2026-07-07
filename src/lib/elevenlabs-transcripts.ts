@@ -21,6 +21,7 @@ const API_BASE = "https://api.elevenlabs.io/v1";
 const DEFAULT_MIN_MINUTES = 15;
 
 const SERVER_AGENT_ENV: Record<DiagnosticFunction, string | undefined> = {
+  finance: process.env.ELEVENLABS_AGENT_ID_FINANCE,
   legal: process.env.ELEVENLABS_AGENT_ID_LEGAL,
   it: process.env.ELEVENLABS_AGENT_ID_IT,
   "operational-delivery": process.env.ELEVENLABS_AGENT_ID_OPERATIONAL_DELIVERY,
@@ -35,16 +36,25 @@ export function getServerAgentId(fn: DiagnosticFunction): string | undefined {
 }
 
 /**
- * Reverse-lookup: which function does this agent id belong to, based on the
- * env-configured defaults? Used by the conversation-init webhook to derive the
- * function for a *shared* agent (one not tied to a specific company via
- * `Company.agentIds`). Returns undefined when no env var matches.
+ * Reverse-lookup: which function does this shared agent id belong to? Agents are
+ * global (one per function), configured either in Admin → Agent configuration
+ * (Firestore) or via the ELEVENLABS_AGENT_ID_* env vars. Used by the
+ * conversation-init webhook to scope a caller's memory to the right section.
+ * Firestore config takes precedence, then env defaults. Undefined if no match.
  */
-export function functionForAgentId(
+export async function functionForAgentId(
   agentId: string,
-): DiagnosticFunction | undefined {
+): Promise<DiagnosticFunction | undefined> {
   const target = agentId.trim();
   if (!target) return undefined;
+
+  const global = await getGlobalAgentConfig();
+  for (const [fn, id] of Object.entries(global.agentIds ?? {}) as [
+    DiagnosticFunction,
+    string | undefined,
+  ][]) {
+    if (id?.trim() === target) return fn;
+  }
   for (const [fn, id] of Object.entries(SERVER_AGENT_ENV) as [
     DiagnosticFunction,
     string | undefined,
@@ -55,16 +65,13 @@ export function functionForAgentId(
 }
 
 /**
- * Resolve an agent ID for a function. Priority:
- *   1. Per-company override (passed by caller)
- *   2. Global Firestore config (set in Admin → Agent configuration)
- *   3. Env var fallback (ELEVENLABS_AGENT_ID_*)
+ * Resolve the shared agent id for a function. Priority:
+ *   1. Global Firestore config (set in Admin → Agent configuration)
+ *   2. Env var fallback (ELEVENLABS_AGENT_ID_*)
  */
 export async function resolveAgentId(
   fn: DiagnosticFunction,
-  companyOverride?: string,
 ): Promise<string | undefined> {
-  if (companyOverride?.trim()) return companyOverride.trim();
   const global = await getGlobalAgentConfig();
   const fromFirestore = global.agentIds?.[fn];
   if (fromFirestore?.trim()) return fromFirestore.trim();
@@ -152,13 +159,12 @@ function stamp(totalSeconds: number): string {
 export async function listLongConversations(
   fn: DiagnosticFunction,
   minMinutes: number = DEFAULT_MIN_MINUTES,
-  agentIdOverride?: string,
 ): Promise<ConversationSummary[]> {
-  // Per-company override → Firestore global config → env var.
-  const agentId = await resolveAgentId(fn, agentIdOverride);
+  // Firestore global config → env var.
+  const agentId = await resolveAgentId(fn);
   if (!agentId) {
     throw new ElevenLabsError(
-      `No ElevenLabs agent id configured for "${fn}". Set it on the company in the Admin console, or set ELEVENLABS_AGENT_ID_${fn.toUpperCase()}.`,
+      `No ElevenLabs agent id configured for "${fn}". Set it in Admin → Agent configuration, or set ELEVENLABS_AGENT_ID_${fn.toUpperCase()}.`,
     );
   }
 

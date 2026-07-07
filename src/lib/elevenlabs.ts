@@ -8,6 +8,7 @@ import type { DiagnosticFunction } from "./types";
  */
 
 const PUBLIC_AGENT_ENV: Record<DiagnosticFunction, string | undefined> = {
+  finance: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID_FINANCE,
   legal: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID_LEGAL,
   it: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID_IT,
   "operational-delivery":

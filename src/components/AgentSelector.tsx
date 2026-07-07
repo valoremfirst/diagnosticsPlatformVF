@@ -5,6 +5,7 @@ import {
   Check,
   Compass,
   HeartHandshake,
+  Landmark,
   Presentation,
   Scale,
   ServerCog,
@@ -16,6 +17,7 @@ import type { DiagnosticFunction } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<DiagnosticFunction, React.ElementType> = {
+  finance: Landmark,
   legal: Scale,
   it: ServerCog,
   "operational-delivery": Truck,

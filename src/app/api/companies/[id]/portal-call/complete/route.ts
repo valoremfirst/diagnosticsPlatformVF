@@ -13,6 +13,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const VALID_FUNCTIONS: DiagnosticFunction[] = [
+  "finance",
   "legal",
   "it",
   "operational-delivery",

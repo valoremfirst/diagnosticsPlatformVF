@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  Brain,
+  ChevronDown,
   FileText,
   Loader2,
   Plus,
@@ -429,10 +431,9 @@ export function SectionDetail({
             {transcripts.map((t) => {
               const tone = t.score != null ? scoreTone(t.score) : null;
               return (
-                <div
-                  key={t.sessionId}
-                  className="flex items-center gap-3 rounded-xl border border-line bg-surface p-3.5"
-                >
+                <div key={t.sessionId} className="space-y-2">
+                  <div className="flex items-center gap-3 rounded-xl border border-line bg-surface p-3.5"
+                  >
                   {t.score != null ? (
                     <span
                       className={cn(
@@ -514,6 +515,14 @@ export function SectionDetail({
                       )}
                     </button>
                   )}
+                  </div>
+                  {!readOnly && (
+                    <SessionMemoryPreview
+                      companyId={companyId}
+                      sessionId={t.sessionId}
+                      fn={fn}
+                    />
+                  )}
                 </div>
               );
             })}
@@ -580,6 +589,87 @@ export function SectionDetail({
           </Card>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Admin-only preview of the memory brief a shared agent received (or will
+ * receive) at the start of an interview. Shows what context was available at
+ * that moment. Expandable, fetched on-demand.
+ */
+function SessionMemoryPreview({
+  companyId,
+  sessionId,
+  fn,
+}: {
+  companyId: string;
+  sessionId: string;
+  fn: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [brief, setBrief] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function toggle() {
+    const next = !open;
+    setOpen(next);
+    if (next && brief === null && !loading) {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/companies/${companyId}/memory-preview?fn=${fn}`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Could not load preview.");
+        setBrief(typeof data.brief === "string" ? data.brief : "");
+      } catch (e) {
+        setError((e as Error).message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+
+  return (
+    <div className="px-3.5">
+      <button
+        type="button"
+        onClick={toggle}
+        className="flex items-center justify-between gap-2 text-[11px] font-semibold text-ink-muted transition-colors hover:text-ink-soft"
+      >
+        <span className="inline-flex items-center gap-1.5">
+          <Brain className="h-3.5 w-3.5" /> Agent memory at this time
+        </span>
+        <ChevronDown
+          className={cn(
+            "h-3.5 w-3.5 transition-transform",
+            open && "rotate-180",
+          )}
+        />
+      </button>
+
+      {open && (
+        <div className="mt-2">
+          {loading ? (
+            <p className="flex items-center gap-1.5 text-[11px] text-ink-faint">
+              <Loader2 className="h-3 w-3 animate-spin" /> Building brief…
+            </p>
+          ) : error ? (
+            <p className="rounded-lg bg-danger/10 px-2.5 py-2 text-[11px] text-danger">
+              {error}
+            </p>
+          ) : brief ? (
+            <pre className="max-h-52 overflow-y-auto whitespace-pre-wrap rounded-lg bg-canvas p-2.5 font-mono text-[11px] leading-relaxed text-ink-soft">
+              {brief}
+            </pre>
+          ) : (
+            <p className="rounded-lg bg-surface-muted px-2.5 py-2 text-[11px] text-ink-faint">
+              No prior history — this was the first interview.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

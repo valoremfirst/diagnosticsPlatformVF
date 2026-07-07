@@ -34,20 +34,22 @@ If `npm` is not on PATH, prepend: `$env:Path += ";C:\node-v24.18.0-win-x64"`
 
 ### API Routes
 Access control lives in `src/lib/auth.ts` (`apiRequire*` helpers). Reads are gated by company access (admin or owning client); writes/config are admin-only.
-- **`/api/companies/[id]/`** — GET (company access); PATCH company metadata incl. `agentIds` (**admin-only**)
+- **`/api/companies/[id]/`** — GET (company access); PATCH company metadata (**admin-only**)
 - **`/api/companies/[id]/sections/[fn]/`** — create diagnostic sessions from transcripts
   - Accepts raw text, array of turns, or `conversationId` (pulls from ElevenLabs)
   - Session IDs are **deterministic** when importing (format: `imp-{companyId}-{conversationId}`) to prevent duplicates on concurrent imports
   - `analyse?: false` saves as draft (manual analysis via UI)
-- **`/api/elevenlabs/transcripts`** — lists completed conversations >15 min per company+function
-  - Looks up company's per-function agent IDs (`Company.agentIds[fn]`), falls back to `.env` defaults
+- **`/api/diagnostics/[id]/analyse`** — admin-only: runs Gemini scoring over a saved transcript. Response includes `{ session, source }`.
+- **`/api/diagnostics/[id]`** — GET (company access); DELETE (admin-only). On delete, if the session came from ElevenLabs its `sourceConversationId` is added to `Company.dismissedConversationIds` so auto-import never re-pulls it.
+- **`/api/elevenlabs/transcripts`** — lists completed conversations >15 min per function
+  - Resolves the shared agent id from global Firestore config (Admin → Agent configuration), falling back to `.env` defaults
 - **`/api/companies/[id]/ask`** — grounded AI Q&A (builds context from analysed diagnostics, asks Gemini)
-- **`/api/companies/[id]/portal-call`** — POST (company access): mints a signed ElevenLabs WebSocket URL for an **in-browser** voice interview + the dynamic variables the agent prompt needs. History stays empty by design (company name only) to preserve per-caller isolation.
+- **`/api/companies/[id]/portal-call`** — POST (company access): mints a signed ElevenLabs WebSocket URL for an **in-browser** voice interview + the dynamic variables the agent prompt needs. Injects the client's history brief (`buildCompanyBrief`) as `conversation_history` — company-scoped (all of this company's interviews in the function), since a browser session has no caller phone.
 - **`/api/companies/[id]/portal-call/complete`** — POST (company access): after a browser call ends, imports its transcript as a draft (`imp-{companyId}-{conversationId}`). Retries briefly while ElevenLabs finalises; returns `202 { pending }` if not ready yet. Company-scoped (not admin-only) so clients can finalise their own interview.
 - **`/api/auth/session`** — POST exchanges a Firebase ID token for a `__session` cookie; DELETE signs out
 - **`/api/admin/users` + `/[uid]`** — admin-only user provisioning (create/list, update role/company, delete)
 - **`/api/admin/phone-numbers`** — admin-only phone→company registry (GET list, POST upsert, DELETE `?phone=`); powers per-caller memory for phone interviews
-- **`/api/elevenlabs/conversation-init`** — ElevenLabs Conversation Initiation webhook (public, HMAC-verified). Identifies the caller by phone number → company, injects that caller's prior-session summary as `{{conversation_history}}`. Per-caller scoped (see `sourceCallerPhone`).
+- **`/api/elevenlabs/conversation-init`** — ElevenLabs Conversation Initiation webhook (public, HMAC-verified). Identifies the caller by phone number → company, resolves the function from the shared `agent_id`, and injects the two-zone history brief as `{{conversation_history}}`. Zone 1 is per-caller scoped (see `sourceCallerPhone`); zone 2 is company-wide.
 
 ### UI Patterns
 - **Server components** for data fetching (pages, API routes)
@@ -72,12 +74,12 @@ Identity is owned by **Firebase Authentication** (email/password). Two roles: `a
 ### Key Integrations
 
 **ElevenLabs Conversational AI:**
-- `src/lib/elevenlabs-transcripts.ts` — lists conversations, fetches transcripts
-- Per-company agent IDs (`Company.agentIds[fn]`) override `.env` defaults
+- `src/lib/elevenlabs-transcripts.ts` — lists conversations, fetches transcripts, resolves agent ids
+- **Agents are shared, one per function** (not per company). `resolveAgentId(fn)` reads the global Firestore config (Admin → Agent configuration) and falls back to `ELEVENLABS_AGENT_ID_*` env vars. Client identity is established *at call time*, not by which agent is hit.
 - Conversations must have `status: "done"` to be imported
 - Each session stores `sourceConversationId` to enable idempotent dedup, and `sourceCallerPhone` (from the call's phone metadata) to scope agent memory per caller
 - **In-portal calls** (`src/components/company/PortalCall.tsx`) run a live interview in the browser via `@elevenlabs/react` (`useConversation` inside `ConversationProvider`). The server mints a signed URL (`getSignedUrl` in `elevenlabs-transcripts.ts`) so the API key never reaches the browser; on hang-up the transcript imports via `/portal-call/complete`. Available to admins and the owning client.
-- **Agent memory** (`src/lib/conversation-memory.ts`) is injected two ways: phone/SIP calls hit the conversation-init webhook (identified by caller phone); browser calls pass dynamic variables directly at `startSession`. Both require the agent prompt to reference `{{client_company}}`, `{{caller_name}}`, `{{caller_phone}}`, `{{conversation_history}}` — every referenced variable must be supplied or the call fails to start.
+- **Agent memory** (`src/lib/conversation-memory.ts`, `buildCompanyBrief`) is a two-zone brief injected via the `{{conversation_history}}` dynamic variable: **zone 1** = the last ~2 interviews in the current function in detail (score, summary, top risks/recs); **zone 2** = a one-line latest-maturity per other function. Delivered two ways: phone/SIP calls hit the conversation-init webhook (client resolved by caller phone; zone 1 filtered per-caller); browser calls get the brief built directly in the portal-call route (client known from the URL; zone 1 is company-wide for the function). Both require the agent prompt to reference `{{client_company}}`, `{{caller_name}}`, `{{caller_phone}}`, `{{conversation_history}}` — every referenced variable must be supplied or the call fails to start. The agent prompt should also instruct: if `conversation_history` is populated it's a follow-up (acknowledge prior findings, probe progress); if empty, it's a first interview.
 
 **Google Gemini:**
 - `src/lib/gemini.ts` — wrapper for analysis and Q&A
@@ -108,10 +110,10 @@ Identity is owned by **Firebase Authentication** (email/password). Two roles: `a
 `src/lib/types.ts` is the source of truth for domain models:
 - `AppUser` — `{ uid, email, role, companyId?, ... }`; identity mirrors Firebase Auth + custom claims
 - `UserRole` — "admin" | "client"
-- `Company` — holds brand config and agent IDs
+- `Company` — holds brand config (agents are shared, not per-company)
 - `DiagnosticSession` — one transcript analysis (status: draft | processing | complete | failed)
 - `DiagnosticResult` — scored frameworks, risks, recommendations
-- `DiagnosticFunction` — union of "legal" | "it" | "operational-delivery" | "sales" | "leadership" | "culture" | "presales"
+- `DiagnosticFunction` — union of "finance" | "legal" | "it" | "operational-delivery" | "sales" | "leadership" | "culture" | "presales"
 
 ### Frameworks & Agents
 `src/lib/frameworks.ts` defines the five assessment frameworks, six business functions, and their agent prompts. Editing here cascades to the UI, Gemini scoring, and API validation.
@@ -120,7 +122,7 @@ Identity is owned by **Firebase Authentication** (email/password). Two roles: `a
 
 **Required for production:**
 - `ELEVENLABS_API_KEY` — enables transcript import
-- `ELEVENLABS_AGENT_ID_*` — agent IDs per function (can be overridden per-company)
+- `ELEVENLABS_AGENT_ID_*` — shared agent ID per function (or set them in Admin → Agent configuration, which takes precedence)
 - `GEMINI_API_KEY` — switches from mock to real Gemini analysis
 - `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID` — browser Firebase config for Auth
 - `FIREBASE_PROJECT_ID` — server project id (Firestore + Auth). On Cloud Run / Cloud Functions, ADC supplies credentials automatically; locally, also set `FIREBASE_CLIENT_EMAIL` + `FIREBASE_PRIVATE_KEY`

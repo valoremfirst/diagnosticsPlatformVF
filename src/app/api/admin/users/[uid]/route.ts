@@ -73,8 +73,22 @@ export async function PATCH(
       ? String(body.displayName).trim() || undefined
       : existing.displayName;
 
+  // Optional password reset — if provided, must be at least 8 chars.
+  const newPassword =
+    body.password !== undefined ? String(body.password) : undefined;
+  if (newPassword !== undefined && newPassword.length < 8) {
+    return NextResponse.json(
+      { error: "Password must be at least 8 characters." },
+      { status: 400 },
+    );
+  }
+
+  const updatePayload: Parameters<typeof auth.updateUser>[1] = {};
+  if (newPassword) updatePayload.password = newPassword;
+
   const claims: { role: UserRole; companyId?: string } = { role };
   if (role === "client" && companyId) claims.companyId = companyId;
+  await auth.updateUser(params.uid, updatePayload);
   await auth.setCustomUserClaims(params.uid, claims);
   // Revoke existing sessions so the new claims take effect on next sign-in.
   await auth.revokeRefreshTokens(params.uid);

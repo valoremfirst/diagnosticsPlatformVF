@@ -13,7 +13,8 @@ per call from the transcripts already flowing into the platform.
 ```
 Client starts a call ──▶ ElevenLabs ──POST──▶ /api/elevenlabs/conversation-init
                                                      │
-                          identify company           │  (by agent_id)
+                          identify company (by phone)│
+                          function (by shared agent_id)
                           compile prior diagnostics   ▼
         agent prompt  ◀── { conversation_history } ── platform
         now includes history
@@ -23,9 +24,10 @@ Client starts a call ──▶ ElevenLabs ──POST──▶ /api/elevenlabs/co
 
 | Piece | File |
 | ----- | ---- |
-| Memory builder (summarises prior sessions) | `src/lib/conversation-memory.ts` |
-| Agent-id → company/function resolver | `findCompanyByAgentId` in `src/lib/store.ts` |
+| Two-zone brief builder (`buildCompanyBrief`) | `src/lib/conversation-memory.ts` |
+| Shared agent-id → function resolver | `functionForAgentId` in `src/lib/elevenlabs-transcripts.ts` |
 | Initiation webhook | `POST /api/elevenlabs/conversation-init` |
+| In-portal browser call (builds brief directly) | `POST /api/companies/[id]/portal-call` |
 
 ## 1. Add the variables to your agent prompt
 
@@ -66,38 +68,22 @@ but always set it in production.
 
 ## 3. How the client is identified
 
-The **function** comes from the `agent_id` (each per-function agent maps to one
-function — whether it's a company-specific agent in `Company.agentIds` or a
-shared `ELEVENLABS_AGENT_ID_*` env agent).
+Agents are **shared** — one per business function, used by every client. So the
+`agent_id` on an inbound call identifies only the **function** (resolved via
+`functionForAgentId`, which checks the global Firestore agent config then the
+`ELEVENLABS_AGENT_ID_*` env defaults).
 
-The **company** is resolved by priority, most authoritative first:
+The **company** is resolved from the caller's **phone number** (`caller_id`),
+looked up in the phone registry (Admin → Caller identification). You **must**
+register each caller's number so the webhook can attribute the call.
 
-1. **Explicit `company_id`** passed as client data — used when the platform
-   initiates a call via the SDK and forwards client data.
-2. **The caller's phone number** (`caller_id`) — looked up in the phone registry
-   (Admin → Caller identification). This is the mechanism for real inbound calls.
-3. **A company-specific agent id** — only unique when the agent is *not* shared.
+If no company resolves (an unregistered number), the webhook returns an
+**empty** history so the call still starts normally — a brand-new caller never
+inherits another client's context.
 
-If no company resolves, the webhook returns an **empty** history so the call
-still starts normally — a brand-new caller never inherits another client's
-context.
-
-### Two valid setups
-
-**A. One agent per company, per function.** Give each company its own agent ids
-(Admin → Agent configuration). `agent_id` alone identifies the client; no phone
-registry needed.
-
-**B. One shared agent per function, many companies.** All clients call the same
-`leadership` agent, etc. Here `agent_id` gives only the function — you **must**
-register each caller's phone number (Admin → Caller identification) so the
-webhook can attribute the call. This is the setup that prevents a new caller
-from being mistaken for a previous one.
-
-> **The phone registry (setup B) directly solves caller collisions:** an
-> unregistered number on a shared agent resolves to *no company* → empty
-> history, instead of leaking whichever client happened to be matched by the
-> agent id.
+> **The phone registry directly solves caller collisions:** an unregistered
+> number resolves to *no company* → empty history, instead of leaking whichever
+> client called the shared agent last.
 
 ### Phone number normalisation
 
@@ -123,14 +109,20 @@ each other's conversations back.
 > in manually with no caller number) simply won't surface in any caller's agent
 > memory — they remain visible in the dashboard.
 
-`buildConversationMemory()` takes that caller's prior sessions (scoped to the
-agent's function when known, else the whole company), newest first, and produces
-a compact brief. Per session it prefers the **analysed result** — overall
-maturity score, executive summary, and top risks — over raw transcript text,
-because that's denser per token and closer to what a human consultant would
-recall. When a session hasn't been scored yet, it falls back to a trimmed slice
-of the transcript. The whole brief is hard-capped (~1,800 chars) to stay within
-ElevenLabs' dynamic-variable limits.
+`buildCompanyBrief()` produces a **two-zone** brief. **Zone 1** details the last
+~2 interviews in the agent's function (per-caller scoped) — per session it
+prefers the **analysed result** (overall maturity score, executive summary, top
+risks and recommendations) over raw transcript text, because that's denser per
+token and closer to what a human consultant would recall; an unscored session
+falls back to a trimmed transcript slice. **Zone 2** adds a single
+latest-maturity line for each *other* function (company-wide), giving the agent
+cross-functional context cheaply. The whole brief is hard-capped (~1,600 chars)
+to stay within ElevenLabs' dynamic-variable limits.
+
+> **Browser (in-portal) calls** don't hit this webhook — they have no caller
+> phone. The `POST /api/companies/[id]/portal-call` route builds the same brief
+> directly (the company is known from the authenticated URL), with zone 1
+> covering all of the company's interviews in the function.
 
 Tunables live at the top of `src/lib/conversation-memory.ts`:
 

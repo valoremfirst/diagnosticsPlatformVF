@@ -111,6 +111,25 @@ export interface FunctionDefinition {
 
 export const FUNCTIONS: FunctionDefinition[] = [
   {
+    id: "finance",
+    label: "Finance",
+    agentName: "Nora",
+    agentTitle: "Finance & Commercial Performance Consultant",
+    blurb:
+      "Probes cashflow, budgeting and forecasting, financial controls, management reporting and ROI discipline.",
+    publicAgentEnv: "NEXT_PUBLIC_ELEVENLABS_AGENT_ID_FINANCE",
+    probesFor: [
+      "Cashflow management",
+      "Budgeting & forecasting",
+      "Financial controls",
+      "Management reporting",
+      "Working capital",
+      "Cost management",
+      "ROI discipline",
+      "Audit readiness",
+    ],
+  },
+  {
     id: "legal",
     label: "Legal",
     agentName: "Alex",

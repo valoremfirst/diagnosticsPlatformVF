@@ -1,41 +1,71 @@
-import type { DiagnosticSession } from "./types";
+import { FUNCTIONS } from "./frameworks";
+import type { DiagnosticFunction, DiagnosticSession } from "./types";
 
 /**
  * Conversation memory for ElevenLabs Conversational AI agents.
  *
- * The interviews run on ElevenLabs (phone / widget / SDK). By default each call
- * starts cold — the agent has no recollection of prior conversations with the
- * same client. To give continuity, we inject a compact summary of the client's
- * previous diagnostics into the agent's system prompt at conversation start,
- * via the Conversation Initiation webhook (see
- * `/api/elevenlabs/conversation-init`). ElevenLabs substitutes it into the
- * `{{conversation_history}}` dynamic variable in the agent prompt template.
+ * Agents are shared — one per business function, used across every client — so
+ * an agent has no built-in notion of who it's talking to. To give continuity we
+ * inject a compact brief of the client's history into the agent's prompt at
+ * conversation start, via the `{{conversation_history}}` dynamic variable:
+ *   - Phone / SIP calls: the conversation-init webhook resolves the client from
+ *     the caller's registered phone number.
+ *   - In-browser portal calls: the route already knows the company (from the
+ *     URL + authenticated user), so it builds the brief directly.
  *
- * We prefer the *analysed* result (executive summary + top risks) over raw
- * transcript text: it's far more information-dense per token, and it's what a
- * human consultant would actually remember going into the next conversation.
+ * The brief is deliberately two-zone and tightly budgeted so it fits inside the
+ * dynamic-variable limit:
+ *   Zone 1 — the function under review: the last couple of interviews in detail
+ *            (score, summary, top risks + recommendations).
+ *   Zone 2 — every other function: a single latest-maturity line each, so the
+ *            agent has cross-functional context without the token cost.
+ *
+ * We prefer the *analysed* result over raw transcript text — it's far denser per
+ * token and it's what a human consultant would actually carry into the next call.
  */
 
-const MAX_PRIOR_SESSIONS = 2;
+const MAX_DETAIL_SESSIONS = 2; // zone-1 interviews shown in full
 const MAX_RISKS_PER_SESSION = 2;
+const MAX_RECS_PER_SESSION = 2;
+const MAX_SUMMARY_CHARS = 240;
 const TRANSCRIPT_FALLBACK_TURNS = 6;
-const MAX_SUMMARY_CHARS = 200; // exec summary truncation per session
-const MAX_TOTAL_CHARS = 1800;  // hard cap so ElevenLabs variable limit isn't hit
+const MAX_TOTAL_CHARS = 1600; // hard cap so ElevenLabs variable limit isn't hit
 
-function summariseSession(session: DiagnosticSession): string | null {
-  const date = new Date(session.createdAt).toLocaleDateString("en-GB", {
+const FUNCTION_LABELS: Record<DiagnosticFunction, string> = FUNCTIONS.reduce(
+  (acc, f) => {
+    acc[f.id] = f.label;
+    return acc;
+  },
+  {} as Record<DiagnosticFunction, string>,
+);
+
+function labelFor(fn: DiagnosticFunction): string {
+  return FUNCTION_LABELS[fn] ?? fn;
+}
+
+function newestFirst(sessions: DiagnosticSession[]): DiagnosticSession[] {
+  return [...sessions].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-GB", {
     year: "numeric",
     month: "short",
     day: "numeric",
   });
+}
 
-  // Preferred: use the scored result — dense and already distilled.
+/** One detailed zone-1 entry for a single prior interview. */
+function detailSession(session: DiagnosticSession): string | null {
+  const date = formatDate(session.createdAt);
+
   if (session.result) {
     const r = session.result;
-    const parts: string[] = [];
-    parts.push(
-      `Overall maturity: ${r.overallScore}/100 (${r.overallMaturityLevel}).`,
-    );
+    const parts: string[] = [
+      `${date} — maturity ${r.overallScore}/100 (${r.overallMaturityLevel}).`,
+    ];
     if (r.executiveSummary) {
       const summary = r.executiveSummary.trim();
       parts.push(
@@ -47,14 +77,21 @@ function summariseSession(session: DiagnosticSession): string | null {
     if (r.risks?.length) {
       const risks = r.risks
         .slice(0, MAX_RISKS_PER_SESSION)
-        .map((risk) => `- ${risk.title} (${risk.severity})`)
+        .map((risk) => `- Risk: ${risk.title} (${risk.severity})`)
         .join("\n");
-      parts.push(`Key risks raised:\n${risks}`);
+      parts.push(risks);
     }
-    return `### ${date}\n${parts.join("\n")}`;
+    if (r.recommendations?.length) {
+      const recs = r.recommendations
+        .slice(0, MAX_RECS_PER_SESSION)
+        .map((rec) => `- Rec: ${rec.title}`)
+        .join("\n");
+      parts.push(recs);
+    }
+    return parts.join("\n");
   }
 
-  // Fallback: a trimmed slice of the raw transcript.
+  // Fallback: a trimmed slice of the raw transcript when not yet analysed.
   const turns = session.transcript ?? [];
   if (!turns.length) return null;
   const slice = turns
@@ -63,48 +100,81 @@ function summariseSession(session: DiagnosticSession): string | null {
     .join("\n");
   const truncated =
     turns.length > TRANSCRIPT_FALLBACK_TURNS ? "\n… (transcript truncated)" : "";
-  return `### ${date}\n${slice}${truncated}`;
+  return `${date} — (not yet analysed)\n${slice}${truncated}`;
+}
+
+/** One zone-2 line: latest analysed maturity for another function. */
+function otherFunctionLines(
+  currentFn: DiagnosticFunction,
+  allSessions: DiagnosticSession[],
+): string[] {
+  const latestByFn = new Map<DiagnosticFunction, DiagnosticSession>();
+  for (const s of newestFirst(allSessions)) {
+    if (s.function === currentFn) continue;
+    if (!s.result) continue;
+    if (!latestByFn.has(s.function)) latestByFn.set(s.function, s);
+  }
+  return [...latestByFn.entries()].map(
+    ([fn, s]) => `${labelFor(fn)} ${s.result!.overallScore}/100`,
+  );
 }
 
 /**
- * Build the conversation-history string injected into the agent prompt. Takes
- * the client's prior sessions (any function, or scoped to one — caller decides),
- * newest first, and returns an empty string when there's nothing to recall.
+ * Build the `conversation_history` brief injected into a shared agent's prompt.
+ *
+ * @param companyName      Client display name.
+ * @param fn               The function this agent is interviewing for (zone 1).
+ * @param functionSessions Prior sessions for this function to detail in zone 1.
+ *                         (Callers scope this — e.g. per-caller for phone calls.)
+ * @param allSessions      Company-wide sessions used to derive zone-2 maturity
+ *                         lines for the other functions.
+ *
+ * Returns "" when there's nothing worth recalling.
  */
-export function buildConversationMemory(
-  priorSessions: DiagnosticSession[],
-): string {
-  const summaries = [...priorSessions]
-    .sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    )
-    .slice(0, MAX_PRIOR_SESSIONS)
-    .map(summariseSession)
+export function buildCompanyBrief({
+  companyName,
+  fn,
+  functionSessions,
+  allSessions,
+}: {
+  companyName: string;
+  fn: DiagnosticFunction;
+  functionSessions: DiagnosticSession[];
+  allSessions: DiagnosticSession[];
+}): string {
+  const detailed = newestFirst(functionSessions)
+    .slice(0, MAX_DETAIL_SESSIONS)
+    .map(detailSession)
     .filter((s): s is string => Boolean(s));
 
-  if (!summaries.length) return "";
+  const others = otherFunctionLines(fn, allSessions);
 
-  const body = [
-    "Prior conversations (newest first):",
-    summaries.join("\n\n"),
-    "Reference these naturally. Don't re-ask covered topics unless probing deeper.",
-  ].join("\n");
+  if (!detailed.length && !others.length) return "";
 
+  const label = labelFor(fn);
+  const parts: string[] = [
+    `Client: ${companyName || "this client"}. Function under review: ${label}.`,
+  ];
+
+  if (detailed.length) {
+    parts.push(
+      `Prior ${label} interviews (newest first):\n${detailed.join("\n\n")}`,
+    );
+  } else {
+    parts.push(`No prior ${label} interviews on record — this is the first.`);
+  }
+
+  if (others.length) {
+    parts.push(`Other functions assessed: ${others.join(" · ")}.`);
+  }
+
+  parts.push(
+    "Reference prior findings naturally. Probe progress on open risks rather " +
+      "than re-asking covered ground.",
+  );
+
+  const body = parts.join("\n\n");
   return body.length > MAX_TOTAL_CHARS
     ? body.slice(0, MAX_TOTAL_CHARS).trimEnd() + "…"
     : body;
-}
-
-/**
- * Concatenate the memory context onto a base system prompt (used when the
- * platform itself initiates a conversation via the browser SDK and controls the
- * prompt directly, rather than relying on the webhook + template variable).
- */
-export function injectMemoryIntoPrompt(
-  baseSystemPrompt: string,
-  memoryContext: string,
-): string {
-  if (!memoryContext) return baseSystemPrompt;
-  return `${baseSystemPrompt}\n\n${memoryContext}`;
 }

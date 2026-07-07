@@ -19,6 +19,7 @@ import type { DiagnosticFunction, TranscriptTurn } from "@/lib/types";
 import { ResultValidationError } from "@/lib/validation";
 
 const VALID_FUNCTIONS: DiagnosticFunction[] = [
+  "finance",
   "legal",
   "it",
   "operational-delivery",

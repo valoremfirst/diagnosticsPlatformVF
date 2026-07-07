@@ -10,15 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   await requireAdmin();
 
-  const companies = (await listCompanies()).map((c) => ({
-    id: c.id,
-    name: c.name,
-    shortName: c.shortName,
-    brandColor: c.brandColor,
-    profilePicture: c.profilePicture,
-    agentIds: c.agentIds ?? {},
-  }));
-
+  const companies = await listCompanies();
   const [users, phoneMappings] = await Promise.all([
     listUsers(),
     listPhoneMappings(),
@@ -30,7 +22,7 @@ export default async function AdminPage() {
       <PageHeader
         crumbs={[{ label: "Dashboard", href: "/" }, { label: "Admin" }]}
         title="Admin console"
-        description="Manage client access and configure each company's ElevenLabs agent IDs per business function."
+        description="Manage client access and configure the shared ElevenLabs agent for each business function."
       />
 
       <section>
@@ -40,7 +32,7 @@ export default async function AdminPage() {
 
       <section>
         <h2 className="mb-3 font-display text-xl text-ink">Agent configuration</h2>
-        <AgentIdAdmin companies={companies} />
+        <AgentIdAdmin />
       </section>
 
       <section>

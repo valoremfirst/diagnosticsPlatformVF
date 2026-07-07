@@ -2,13 +2,11 @@ import { createHmac, timingSafeEqual } from "crypto";
 
 import { NextResponse } from "next/server";
 
-import { buildConversationMemory } from "@/lib/conversation-memory";
+import { buildCompanyBrief } from "@/lib/conversation-memory";
 import { functionForAgentId } from "@/lib/elevenlabs-transcripts";
 import {
-  findCompanyByAgentId,
   getCompany,
   getPhoneMapping,
-  listSectionSessions,
   listSessionsByCompany,
   normalisePhone,
 } from "@/lib/store";
@@ -37,6 +35,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const VALID_FUNCTIONS: DiagnosticFunction[] = [
+  "finance",
   "legal",
   "it",
   "operational-delivery",
@@ -136,15 +135,11 @@ export async function POST(req: Request) {
 
   console.info("[convai-init] Raw body:", rawBody);
 
-  // Resolve function from agent_id so we can scope memory to the right section.
+  // Resolve function from the shared agent_id so we can scope memory to the
+  // right section (agents are global, one per function).
   let fn: DiagnosticFunction | undefined;
   if (body.agent_id) {
-    const match = await findCompanyByAgentId(body.agent_id);
-    if (match) {
-      fn = match.function;
-    } else {
-      fn = functionForAgentId(body.agent_id);
-    }
+    fn = await functionForAgentId(body.agent_id);
   }
   const passedFn =
     body.function ?? (body.dynamic_variables?.function as string | undefined);
@@ -179,23 +174,25 @@ export async function POST(req: Request) {
   const companyName = company?.name ?? "";
 
   try {
-    // Scope memory to this agent's function when known; otherwise fall back to
-    // the whole company so cross-function history is still available.
-    const companySessions = fn
-      ? await listSectionSessions(companyId, fn)
-      : await listSessionsByCompany(companyId);
+    const allSessions = await listSessionsByCompany(companyId);
 
-    // Per-caller memory: only recall sessions from THIS phone number, so two
-    // people at the same company never see each other's threads. (The platform
-    // dashboards still show every session — this filter is agent-memory only.)
+    // Zone 1 is per-caller: only recall THIS phone number's interviews in the
+    // current function, so two people at the same company never see each other's
+    // threads. (Dashboards still show every session — this filter is agent
+    // memory only.) Zone 2 (other-function maturity) is company-wide aggregate.
     const callerKey = normalisePhone(body.caller_id ?? "");
-    const priorSessions = companySessions.filter(
-      (s) =>
-        s.sourceCallerPhone &&
-        normalisePhone(s.sourceCallerPhone) === callerKey,
-    );
+    const functionSessions = fn
+      ? allSessions.filter(
+          (s) =>
+            s.function === fn &&
+            s.sourceCallerPhone &&
+            normalisePhone(s.sourceCallerPhone) === callerKey,
+        )
+      : [];
 
-    const memory = buildConversationMemory(priorSessions);
+    const memory = fn
+      ? buildCompanyBrief({ companyName, fn, functionSessions, allSessions })
+      : "";
 
     return NextResponse.json({
       type: "conversation_initiation_client_data",

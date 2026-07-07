@@ -2,19 +2,9 @@ import { NextResponse } from "next/server";
 
 import { apiRequireAdmin, apiRequireCompanyAccess } from "@/lib/auth";
 import { getCompany, updateCompany } from "@/lib/store";
-import type { Company, DiagnosticFunction } from "@/lib/types";
+import type { Company } from "@/lib/types";
 
 const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
-
-const VALID_FUNCTIONS: DiagnosticFunction[] = [
-  "legal",
-  "it",
-  "operational-delivery",
-  "sales",
-  "leadership",
-  "culture",
-  "presales",
-];
 
 // GET /api/companies/:id — fetch a single company (admin or the owning client).
 export async function GET(
@@ -77,16 +67,6 @@ export async function PATCH(
   }
   if (body.description !== undefined) {
     patch.description = String(body.description).trim();
-  }
-  if (body.agentIds !== undefined && typeof body.agentIds === "object") {
-    // Keep only valid function keys with non-empty string ids.
-    const raw = body.agentIds as Record<string, unknown>;
-    const cleaned: Partial<Record<DiagnosticFunction, string>> = {};
-    for (const fn of VALID_FUNCTIONS) {
-      const v = raw[fn];
-      if (typeof v === "string" && v.trim()) cleaned[fn] = v.trim();
-    }
-    patch.agentIds = cleaned;
   }
 
   const updated = await updateCompany(params.id, patch);

@@ -12,6 +12,7 @@ import { shade, withAlpha } from "@/lib/color";
 import {
   getGlobalAgentConfig,
   listCompanies,
+  listPhoneMappings,
   listSessionsLean,
   listUsers,
 } from "@/lib/store";
@@ -78,13 +79,13 @@ export default async function OverviewPage() {
   }).format(new Date());
 
   // Onboarding — computed server-side so the checklist reflects real state.
-  const [globalConfig, users] = await Promise.all([
+  const [globalConfig, users, phoneMappings] = await Promise.all([
     getGlobalAgentConfig().catch(() => ({ agentIds: {} })),
     listUsers().catch(() => []),
+    listPhoneMappings().catch(() => []),
   ]);
   const agentsConfigured =
     Object.values(globalConfig.agentIds ?? {}).some((v) => v?.trim()) ||
-    companies.some((c) => Object.values(c.agentIds ?? {}).some((v) => v?.trim())) ||
     Boolean(process.env.ELEVENLABS_AGENT_ID_LEGAL);
   const onboardingSteps = [
     {
@@ -96,10 +97,17 @@ export default async function OverviewPage() {
     },
     {
       id: "agents",
-      label: "Configure ElevenLabs agents",
-      description: "Point each business function at its interview agent.",
+      label: "Configure the shared agents",
+      description: "Set one ElevenLabs agent per business function (shared across all clients).",
       href: "/admin",
       done: agentsConfigured,
+    },
+    {
+      id: "callers",
+      label: "Register caller phone numbers",
+      description: "Map each client's phone number so the agent knows who's calling and recalls their history.",
+      href: "/admin",
+      done: phoneMappings.length > 0,
     },
     {
       id: "diagnostic",

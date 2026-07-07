@@ -5,6 +5,7 @@ import { getGlobalAgentConfig, setGlobalAgentConfig } from "@/lib/store";
 import type { DiagnosticFunction } from "@/lib/types";
 
 const VALID_FUNCTIONS: DiagnosticFunction[] = [
+  "finance",
   "legal",
   "it",
   "operational-delivery",

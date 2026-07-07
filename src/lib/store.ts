@@ -269,30 +269,6 @@ export async function getCompany(id: string): Promise<Company | undefined> {
   );
 }
 
-/**
- * Resolve the company + function that owns a given ElevenLabs agent id. Used by
- * the conversation-initiation webhook to identify which client is calling (each
- * company runs its own per-function agents via `Company.agentIds`). Returns the
- * first match, since an agent id maps to exactly one (company, function) pair.
- */
-export async function findCompanyByAgentId(
-  agentId: string,
-): Promise<{ company: Company; function: DiagnosticFunction } | undefined> {
-  const target = agentId.trim();
-  if (!target) return undefined;
-  const companies = await listCompanies();
-  for (const company of companies) {
-    const entries = Object.entries(company.agentIds ?? {}) as [
-      DiagnosticFunction,
-      string,
-    ][];
-    for (const [fn, id] of entries) {
-      if (id?.trim() === target) return { company, function: fn };
-    }
-  }
-  return undefined;
-}
-
 function slugify(name: string): string {
   return (
     name
@@ -335,7 +311,6 @@ export async function createCompany(
     tagline: input.tagline?.trim() || undefined,
     profilePicture: input.profilePicture?.trim() || undefined,
     description: input.description?.trim() || undefined,
-    agentIds: input.agentIds,
     createdAt: input.createdAt ?? new Date().toISOString(),
   };
   return tryFs(

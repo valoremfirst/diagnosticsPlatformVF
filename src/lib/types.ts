@@ -20,6 +20,7 @@ export interface AppUser {
 }
 
 export type DiagnosticFunction =
+  | "finance"
   | "legal"
   | "it"
   | "operational-delivery"
@@ -122,11 +123,6 @@ export interface Company {
   profilePicture?: string;
   /** Longer description of the company shown on the dashboard hero. */
   description?: string;
-  /**
-   * Per-function ElevenLabs agent ids. Each company runs its own agents, so
-   * auto-import resolves the agent id from here (falling back to env defaults).
-   */
-  agentIds?: Partial<Record<DiagnosticFunction, string>>;
   /** ElevenLabs conversation IDs the admin has explicitly deleted — never re-imported. */
   dismissedConversationIds?: string[];
   createdAt: string;

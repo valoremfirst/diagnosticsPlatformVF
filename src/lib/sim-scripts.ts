@@ -8,6 +8,19 @@ import type { DiagnosticFunction, TranscriptTurn } from "./types";
 
 type Line = { speaker: "agent" | "user"; text: string };
 
+const FINANCE: Line[] = [
+  { speaker: "agent", text: "Thanks for the time. How much visibility do you have over cashflow week to week?" },
+  { speaker: "user", text: "Not much. We look at the bank balance more than a real forecast — a rolling 13-week view is something we keep meaning to build." },
+  { speaker: "agent", text: "How does budgeting and forecasting work today?" },
+  { speaker: "user", text: "An annual budget in a spreadsheet that's out of date by Q2. We don't re-forecast, so variances just pile up unexplained." },
+  { speaker: "agent", text: "What financial controls are in place around spend and approvals?" },
+  { speaker: "user", text: "Loose. Approval limits aren't enforced in the system, and month-end close takes almost three weeks of manual reconciliation." },
+  { speaker: "agent", text: "How timely and trusted is your management reporting?" },
+  { speaker: "user", text: "It lands mid-month for the prior month, and leadership don't fully trust the numbers, so decisions get made on gut feel." },
+  { speaker: "agent", text: "How do you evaluate return on major investments?" },
+  { speaker: "user", text: "We rarely do a proper business case or a post-investment review, so we don't really know what's paying off." },
+];
+
 const LEGAL: Line[] = [
   { speaker: "agent", text: "Thanks for the time. How are commercial contracts managed across the business today?" },
   { speaker: "user", text: "Loosely. Signed contracts live in various inboxes and a shared drive — there's no central repository or renewal tracking." },
@@ -84,6 +97,7 @@ const PRESALES: Line[] = [
 ];
 
 const SCRIPTS: Record<DiagnosticFunction, Line[]> = {
+  finance: FINANCE,
   legal: LEGAL,
   it: IT,
   "operational-delivery": OPERATIONAL_DELIVERY,

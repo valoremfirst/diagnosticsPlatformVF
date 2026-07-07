@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Plus, Trash2, UserPlus, X } from "lucide-react";
+import { KeyRound, Loader2, Plus, Trash2, UserPlus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -29,6 +29,9 @@ export function UserAdmin({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [resetUid, setResetUid] = useState<string | null>(null);
+  const [resetPw, setResetPw] = useState("");
+  const [resetError, setResetError] = useState<string | null>(null);
 
   async function createUser(e: React.FormEvent) {
     e.preventDefault();
@@ -70,6 +73,39 @@ export function UserAdmin({
         body: JSON.stringify({ companyId: nextCompanyId }),
       });
       router.refresh();
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  function openReset(uid: string) {
+    setResetUid(uid);
+    setResetPw("");
+    setResetError(null);
+  }
+
+  async function submitReset(uid: string) {
+    if (resetPw.length < 8) {
+      setResetError("Password must be at least 8 characters.");
+      return;
+    }
+    setPendingId(uid);
+    setResetError(null);
+    try {
+      const res = await fetch(`/api/admin/users/${uid}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: resetPw }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setResetError(data.error || "Could not reset password.");
+        return;
+      }
+      setResetUid(null);
+      setResetPw("");
+    } catch {
+      setResetError("Could not reset password.");
     } finally {
       setPendingId(null);
     }
@@ -233,20 +269,67 @@ export function UserAdmin({
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => removeUser(u.uid)}
-                      disabled={pendingId === u.uid}
-                      className="inline-flex items-center rounded-lg p-1.5 text-ink-faint hover:bg-danger/10 hover:text-danger disabled:opacity-50"
-                      aria-label="Delete user"
-                      title={`Delete ${u.email}`}
-                    >
-                      {pendingId === u.uid ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </button>
+                    {resetUid === u.uid ? (
+                      <div className="flex items-center justify-end gap-2">
+                        <div className="flex flex-col items-end gap-1">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={resetPw}
+                              onChange={(e) => { setResetPw(e.target.value); setResetError(null); }}
+                              placeholder="New password (min 8)"
+                              autoFocus
+                              className="h-8 w-44 rounded-lg border border-line bg-surface px-2 text-xs text-ink placeholder:text-ink-faint focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-tint"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => submitReset(u.uid)}
+                              disabled={pendingId === u.uid}
+                              className="inline-flex h-8 items-center gap-1 rounded-lg bg-teal px-2.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                            >
+                              {pendingId === u.uid ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setResetUid(null); setResetError(null); }}
+                              className="rounded-lg p-1.5 text-ink-faint hover:bg-surface-muted hover:text-ink-muted"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          {resetError && (
+                            <p className="text-xs text-danger">{resetError}</p>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => openReset(u.uid)}
+                          disabled={pendingId === u.uid}
+                          className="inline-flex items-center rounded-lg p-1.5 text-ink-faint hover:bg-surface-muted hover:text-ink-soft disabled:opacity-50"
+                          aria-label="Reset password"
+                          title={`Reset password for ${u.email}`}
+                        >
+                          <KeyRound className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeUser(u.uid)}
+                          disabled={pendingId === u.uid}
+                          className="inline-flex items-center rounded-lg p-1.5 text-ink-faint hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                          aria-label="Delete user"
+                          title={`Delete ${u.email}`}
+                        >
+                          {pendingId === u.uid ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))
