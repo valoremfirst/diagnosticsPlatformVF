@@ -8,7 +8,6 @@ import {
   getCompany,
   getPhoneMapping,
   listSessionsByCompany,
-  normalisePhone,
 } from "@/lib/store";
 import type { DiagnosticFunction } from "@/lib/types";
 
@@ -111,6 +110,8 @@ function emptyResponse(extra?: Record<string, string>) {
     dynamic_variables: {
       conversation_history: "",
       client_company: "",
+      caller_phone: "",
+      caller_name: "",
       ...extra,
     },
   });
@@ -176,22 +177,24 @@ export async function POST(req: Request) {
   try {
     const allSessions = await listSessionsByCompany(companyId);
 
-    // Zone 1 is per-caller: only recall THIS phone number's interviews in the
-    // current function, so two people at the same company never see each other's
-    // threads. (Dashboards still show every session — this filter is agent
-    // memory only.) Zone 2 (other-function maturity) is company-wide aggregate.
-    const callerKey = normalisePhone(body.caller_id ?? "");
+    // Zone 1 is company-wide for the current function: recall every interview in
+    // this function for the company, so a caller also hears what colleagues (and
+    // text-imported transcripts) covered. Sessions from a *different* caller are
+    // labeled "[from colleague: +44…]" inside the brief so the agent references
+    // them as someone else's input rather than the current caller's own history.
+    // (Zone 2 — other-function maturity — is a company-wide aggregate too.)
     const functionSessions = fn
-      ? allSessions.filter(
-          (s) =>
-            s.function === fn &&
-            s.sourceCallerPhone &&
-            normalisePhone(s.sourceCallerPhone) === callerKey,
-        )
+      ? allSessions.filter((s) => s.function === fn)
       : [];
 
     const memory = fn
-      ? buildCompanyBrief({ companyName, fn, functionSessions, allSessions })
+      ? buildCompanyBrief({
+          companyName,
+          fn,
+          functionSessions,
+          allSessions,
+          currentCallerPhone: body.caller_id,
+        })
       : "";
 
     return NextResponse.json({

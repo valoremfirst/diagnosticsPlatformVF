@@ -5,7 +5,7 @@ import {
   ElevenLabsError,
   fetchConversationTranscript,
 } from "@/lib/elevenlabs-transcripts";
-import { FRAMEWORKS } from "@/lib/frameworks";
+import { frameworksForFunction } from "@/lib/frameworks";
 import { analyseTranscript } from "@/lib/gemini";
 import {
   createSectionSession,
@@ -162,7 +162,7 @@ export async function POST(
     sourceConversationId,
     sourceCallerPhone,
     status: shouldAnalyse ? "processing" : "draft",
-    selectedFrameworks: FRAMEWORKS.map((f) => f.name),
+    selectedFrameworks: frameworksForFunction(fn).map((f) => f.name),
   });
 
   if (!session) {

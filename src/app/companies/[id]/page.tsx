@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import { CompanyDashboardClient } from "@/components/company/CompanyDashboardClient";
 import { assertCompanyAccess } from "@/lib/auth";
-import { FRAMEWORKS, FUNCTIONS } from "@/lib/frameworks";
+import { FRAMEWORKS, FUNCTIONS, frameworksForFunction } from "@/lib/frameworks";
 import { getCompany, listSessionsByCompany } from "@/lib/store";
 import { maturityFromScore } from "@/lib/utils";
 
@@ -34,8 +34,9 @@ export default async function CompanyPage({
               ownCompleted.length,
           )
         : null;
-    // Per-section framework averages across this section's completed diagnostics.
-    const frameworks = FRAMEWORKS.map((fw) => {
+    // Per-section framework averages — only the frameworks relevant to THIS
+    // function, so an IT section isn't padded with Legal/Finance rows.
+    const frameworks = frameworksForFunction(f.id).map((fw) => {
       const scores = ownCompleted
         .map(
           (s) =>
@@ -95,17 +96,21 @@ export default async function CompanyPage({
   );
   const sectionsScored = sections.filter((s) => s.avgScore != null).length;
 
+  // Company radar: only frameworks that have at least one score across the
+  // company's completed diagnostics (functions score different frameworks now,
+  // so showing the whole catalogue would leave most axes empty).
   const radarData = FRAMEWORKS.map((f) => {
     const scores = completed
       .map(
         (s) => s.result?.frameworks.find((x) => x.framework === f.name)?.score,
       )
       .filter((n): n is number => typeof n === "number");
-    const current = scores.length
-      ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
-      : 0;
+    if (!scores.length) return null;
+    const current = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
     return { label: f.short, current, benchmark: 58 };
-  });
+  }).filter((d): d is { label: string; current: number; benchmark: number } =>
+    d !== null,
+  );
 
   return (
     <CompanyDashboardClient

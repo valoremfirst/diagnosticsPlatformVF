@@ -269,20 +269,20 @@ export function SectionDetail({
               {!readOnly && (
                 <>
                   {pending.length > 0 && (
-                <button
-                  type="button"
-                  onClick={analyseAllPending}
-                  disabled={analysingAll}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-xs font-semibold text-ink-soft transition-colors hover:border-ink-faint disabled:opacity-60"
-                >
-                  {analysingAll ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-3.5 w-3.5" style={{ color: brand }} />
+                    <button
+                      type="button"
+                      onClick={analyseAllPending}
+                      disabled={analysingAll}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-xs font-semibold text-ink-soft transition-colors hover:border-ink-faint disabled:opacity-60"
+                    >
+                      {analysingAll ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-3.5 w-3.5" style={{ color: brand }} />
+                      )}
+                      Analyse all ({pending.length})
+                    </button>
                   )}
-                  Analyse all ({pending.length})
-                </button>
-              )}
               <span
                 className={cn(
                   "inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium",

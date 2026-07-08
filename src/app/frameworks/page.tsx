@@ -3,7 +3,11 @@ import { Check } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { requireAdmin } from "@/lib/auth";
-import { FRAMEWORKS } from "@/lib/frameworks";
+import {
+  FRAMEWORKS,
+  FUNCTION_FRAMEWORKS,
+  FUNCTIONS,
+} from "@/lib/frameworks";
 import { listSessions } from "@/lib/store";
 import { cn, MATURITY_LABEL, maturityFromScore, scoreTone } from "@/lib/utils";
 
@@ -12,6 +16,12 @@ export const dynamic = "force-dynamic";
 export default async function FrameworksPage() {
   await requireAdmin();
   const completed = (await listSessions()).filter((s) => s.result);
+
+  // Reverse the function→frameworks map so each framework lists its functions.
+  const functionsForFramework = (id: string): string[] =>
+    FUNCTIONS.filter((fn) => FUNCTION_FRAMEWORKS[fn.id]?.includes(id)).map(
+      (fn) => fn.label,
+    );
 
   function portfolioScore(name: string): number | null {
     const scores = completed
@@ -26,7 +36,7 @@ export default async function FrameworksPage() {
       <PageHeader
         crumbs={[{ label: "Dashboard", href: "/" }, { label: "Frameworks" }]}
         title="Diagnostic frameworks"
-        description="Every interview is scored against these five business-maturity frameworks. Scores shown are the current portfolio average across completed diagnostics."
+        description="Each business function is scored against the frameworks relevant to it. Scores shown are the current portfolio average across completed diagnostics."
       />
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -67,6 +77,19 @@ export default async function FrameworksPage() {
                   </li>
                 ))}
               </ul>
+              <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-line pt-3">
+                <span className="text-[11px] font-medium text-ink-faint">
+                  Applies to:
+                </span>
+                {functionsForFramework(f.id).map((label) => (
+                  <span
+                    key={label}
+                    className="rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-ink-soft"
+                  >
+                    {label}
+                  </span>
+                ))}
+              </div>
             </Card>
           );
         })}

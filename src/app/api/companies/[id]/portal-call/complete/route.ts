@@ -5,7 +5,7 @@ import {
   ElevenLabsError,
   fetchConversationTranscript,
 } from "@/lib/elevenlabs-transcripts";
-import { FRAMEWORKS } from "@/lib/frameworks";
+import { frameworksForFunction } from "@/lib/frameworks";
 import { createSectionSession, getCompany, listSectionSessions } from "@/lib/store";
 import type { DiagnosticFunction } from "@/lib/types";
 
@@ -120,7 +120,7 @@ export async function POST(
     sourceConversationId: conversationId,
     sourceCallerPhone: callerPhone,
     status: "draft",
-    selectedFrameworks: FRAMEWORKS.map((f) => f.name),
+    selectedFrameworks: frameworksForFunction(fn).map((f) => f.name),
   });
 
   if (!session) {

@@ -1,4 +1,4 @@
-import { FRAMEWORKS } from "./frameworks";
+import { frameworksForFunction } from "./frameworks";
 import type {
   DiagnosticFunction,
   DiagnosticResult,
@@ -19,6 +19,21 @@ export async function askGemini(prompt: string): Promise<string> {
   const model = genAI.getGenerativeModel({
     model: process.env.GEMINI_MODEL || "gemini-1.5-pro",
     generationConfig: { temperature: 0.3 },
+  });
+  const res = await model.generateContent(prompt);
+  return res.response.text();
+}
+
+/** Ask Gemini for a strict-JSON response (sets the JSON response MIME type). */
+export async function askGeminiJson(prompt: string): Promise<string> {
+  const { GoogleGenerativeAI } = await import("@google/generative-ai");
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
+  const model = genAI.getGenerativeModel({
+    model: process.env.GEMINI_MODEL || "gemini-1.5-pro",
+    generationConfig: {
+      responseMimeType: "application/json",
+      temperature: 0.3,
+    },
   });
   const res = await model.generateContent(prompt);
   return res.response.text();
@@ -49,17 +64,23 @@ const SCHEMA_BLOCK = `{
   "roadmap": [ { "phase": "0-30 days | 31-90 days | 3-6 months", "action": string, "ownerRole": string, "expectedOutcome": string } ]
 }`;
 
-export function buildPrompt(transcript: TranscriptTurn[]): string {
+export function buildPrompt(
+  transcript: TranscriptTurn[],
+  fn: DiagnosticFunction,
+): string {
   const formatted = transcript
     .map((t, i) => `[${i}] ${t.speaker === "agent" ? "Consultant" : "Stakeholder"} (${t.timestamp}): ${t.text}`)
     .join("\n");
 
+  const frameworks = frameworksForFunction(fn);
+
   return `You are an expert management consultant performing a structured business diagnostic.
 
-Analyse the transcript against these frameworks:
-${FRAMEWORKS.map((f) => `- ${f.name} (criteria: ${f.criteria.join(", ")})`).join("\n")}
+Analyse the transcript ONLY against these frameworks (do not add or substitute others):
+${frameworks.map((f) => `- ${f.name} (criteria: ${f.criteria.join(", ")})`).join("\n")}
 
 Rules:
+- Score every framework listed above, and only those.
 - Use only the transcript as evidence.
 - Extract direct evidence quotes before scoring.
 - Map each quote to a framework criterion using its transcript index.
@@ -94,7 +115,7 @@ export async function analyseTranscript(
     generationConfig: { responseMimeType: "application/json", temperature: 0.3 },
   });
 
-  const prompt = buildPrompt(transcript);
+  const prompt = buildPrompt(transcript, fn);
   const res = await model.generateContent(prompt);
   const text = res.response.text();
 
@@ -138,7 +159,7 @@ function synthesiseResult(
   const evidence = pickUserEvidence(transcript);
   let seed = transcript.reduce((a, t) => a + t.text.length, 0) + fn.length;
 
-  const frameworks: FrameworkAssessment[] = FRAMEWORKS.map((f, fi) => {
+  const frameworks: FrameworkAssessment[] = frameworksForFunction(fn).map((f, fi) => {
     const criteria = f.criteria.map((name, ci) => {
       seed += 1;
       const score = seededScore(seed + fi * 7 + ci * 3, 45, 18);

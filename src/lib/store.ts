@@ -160,6 +160,7 @@ export async function createSession(
     function: input.function,
     title: input.title,
     sourceConversationId: input.sourceConversationId,
+    sourceCallerPhone: input.sourceCallerPhone,
     status: input.status ?? "draft",
     clientContact: input.clientContact,
     sector: input.sector,

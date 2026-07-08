@@ -48,8 +48,8 @@ Access control lives in `src/lib/auth.ts` (`apiRequire*` helpers). Reads are gat
 - **`/api/companies/[id]/portal-call/complete`** — POST (company access): after a browser call ends, imports its transcript as a draft (`imp-{companyId}-{conversationId}`). Retries briefly while ElevenLabs finalises; returns `202 { pending }` if not ready yet. Company-scoped (not admin-only) so clients can finalise their own interview.
 - **`/api/auth/session`** — POST exchanges a Firebase ID token for a `__session` cookie; DELETE signs out
 - **`/api/admin/users` + `/[uid]`** — admin-only user provisioning (create/list, update role/company, delete)
-- **`/api/admin/phone-numbers`** — admin-only phone→company registry (GET list, POST upsert, DELETE `?phone=`); powers per-caller memory for phone interviews
-- **`/api/elevenlabs/conversation-init`** — ElevenLabs Conversation Initiation webhook (public, HMAC-verified). Identifies the caller by phone number → company, resolves the function from the shared `agent_id`, and injects the two-zone history brief as `{{conversation_history}}`. Zone 1 is per-caller scoped (see `sourceCallerPhone`); zone 2 is company-wide.
+- **`/api/admin/phone-numbers`** — admin-only phone→company registry (GET list, POST upsert, DELETE `?phone=`); resolves the calling company and identifies the caller for phone interviews
+- **`/api/elevenlabs/conversation-init`** — ElevenLabs Conversation Initiation webhook (public, HMAC-verified). Identifies the caller by phone number → company, resolves the function from the shared `agent_id`, and injects the two-zone history brief as `{{conversation_history}}`. Zone 1 is **company-wide** for the function (so a caller also hears colleagues' and text-imported interviews); sessions from a *different* caller than the current one are labelled `[from colleague: +44…]` in the brief (via `currentCallerPhone` ↔ `sourceCallerPhone`). Zone 2 is company-wide.
 
 ### UI Patterns
 - **Server components** for data fetching (pages, API routes)
@@ -77,9 +77,9 @@ Identity is owned by **Firebase Authentication** (email/password). Two roles: `a
 - `src/lib/elevenlabs-transcripts.ts` — lists conversations, fetches transcripts, resolves agent ids
 - **Agents are shared, one per function** (not per company). `resolveAgentId(fn)` reads the global Firestore config (Admin → Agent configuration) and falls back to `ELEVENLABS_AGENT_ID_*` env vars. Client identity is established *at call time*, not by which agent is hit.
 - Conversations must have `status: "done"` to be imported
-- Each session stores `sourceConversationId` to enable idempotent dedup, and `sourceCallerPhone` (from the call's phone metadata) to scope agent memory per caller
+- Each session stores `sourceConversationId` to enable idempotent dedup, and `sourceCallerPhone` (from the call's phone metadata) to label which caller a recalled interview came from
 - **In-portal calls** (`src/components/company/PortalCall.tsx`) run a live interview in the browser via `@elevenlabs/react` (`useConversation` inside `ConversationProvider`). The server mints a signed URL (`getSignedUrl` in `elevenlabs-transcripts.ts`) so the API key never reaches the browser; on hang-up the transcript imports via `/portal-call/complete`. Available to admins and the owning client.
-- **Agent memory** (`src/lib/conversation-memory.ts`, `buildCompanyBrief`) is a two-zone brief injected via the `{{conversation_history}}` dynamic variable: **zone 1** = the last ~2 interviews in the current function in detail (score, summary, top risks/recs); **zone 2** = a one-line latest-maturity per other function. Delivered two ways: phone/SIP calls hit the conversation-init webhook (client resolved by caller phone; zone 1 filtered per-caller); browser calls get the brief built directly in the portal-call route (client known from the URL; zone 1 is company-wide for the function). Both require the agent prompt to reference `{{client_company}}`, `{{caller_name}}`, `{{caller_phone}}`, `{{conversation_history}}` — every referenced variable must be supplied or the call fails to start. The agent prompt should also instruct: if `conversation_history` is populated it's a follow-up (acknowledge prior findings, probe progress); if empty, it's a first interview.
+- **Agent memory** (`src/lib/conversation-memory.ts`, `buildCompanyBrief`) is a two-zone brief injected via the `{{conversation_history}}` dynamic variable: **zone 1** = the last ~2 interviews in the current function in detail (score, summary, top risks/recs); **zone 2** = a one-line latest-maturity per other function. Zone 1 is **company-wide** for the function (a caller hears colleagues' and text-imported interviews too); an interview from a different caller than the current one is labelled `[from colleague: +44…]` so the agent treats it as someone else's input. Delivered two ways: phone/SIP calls hit the conversation-init webhook (client resolved by caller phone, which also drives the colleague-labelling); browser calls get the brief built directly in the portal-call route (client known from the URL; no caller phone, so nothing is labelled). Both require the agent prompt to reference `{{client_company}}`, `{{caller_name}}`, `{{caller_phone}}`, `{{conversation_history}}` — every referenced variable must be supplied or the call fails to start. The agent prompt should also instruct: if `conversation_history` is populated it's a follow-up (acknowledge prior findings, probe progress); if empty, it's a first interview.
 
 **Google Gemini:**
 - `src/lib/gemini.ts` — wrapper for analysis and Q&A
@@ -116,7 +116,7 @@ Identity is owned by **Firebase Authentication** (email/password). Two roles: `a
 - `DiagnosticFunction` — union of "finance" | "legal" | "it" | "operational-delivery" | "sales" | "leadership" | "culture" | "presales"
 
 ### Frameworks & Agents
-`src/lib/frameworks.ts` defines the five assessment frameworks, six business functions, and their agent prompts. Editing here cascades to the UI, Gemini scoring, and API validation.
+`src/lib/frameworks.ts` defines the assessment framework **catalogue** (`FRAMEWORKS`), the eight business functions, and their agent prompts. Crucially, each function is scored only against the frameworks **relevant to it** — the `FUNCTION_FRAMEWORKS` map (function → framework ids) and its `frameworksForFunction(fn)` helper drive this. Gemini's prompt (`buildPrompt`), the mock synthesiser, the per-section dashboard rows, and each session's `selectedFrameworks` all derive from `frameworksForFunction(fn)`, so an IT interview is graded on NIST/IT-Resilience/Digital-Maturity — not Legal Ops. Editing here cascades to the UI, Gemini scoring, and API validation.
 
 ## Environment Variables
 
@@ -155,9 +155,9 @@ Identity is owned by **Firebase Authentication** (email/password). Two roles: `a
 4. UI auto-populates tabs; API routes validate against `VALID_FUNCTIONS` — update those lists
 
 **Add a new framework:**
-1. Add to `FRAMEWORKS` array in `src/lib/frameworks.ts`
-2. Update Gemini prompts to assess it
-3. `DiagnosticResult.frameworks` will include it automatically once analysed
+1. Add to the `FRAMEWORKS` catalogue in `src/lib/frameworks.ts`
+2. Add its id to the relevant function(s) in `FUNCTION_FRAMEWORKS` (a framework not referenced there is never scored)
+3. Gemini's prompt and the dashboard pick it up automatically via `frameworksForFunction`
 
 **Gate a new API route:**
 1. Import the helpers from `src/lib/auth.ts`

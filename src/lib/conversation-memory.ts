@@ -49,6 +49,16 @@ function newestFirst(sessions: DiagnosticSession[]): DiagnosticSession[] {
   );
 }
 
+// Mirror store.normalisePhone: keep a leading "+", strip other non-digits. Kept
+// local so this pure brief-builder doesn't pull in the store module.
+function normalisePhone(raw: string): string {
+  const trimmed = (raw ?? "").trim();
+  if (!trimmed) return "";
+  const hasPlus = trimmed.startsWith("+");
+  const digits = trimmed.replace(/\D/g, "");
+  return hasPlus ? `+${digits}` : digits;
+}
+
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-GB", {
     year: "numeric",
@@ -58,13 +68,26 @@ function formatDate(iso: string): string {
 }
 
 /** One detailed zone-1 entry for a single prior interview. */
-function detailSession(session: DiagnosticSession): string | null {
+function detailSession(
+  session: DiagnosticSession,
+  currentCallerPhone?: string,
+): string | null {
   const date = formatDate(session.createdAt);
+
+  // Label this session if it's from a different caller than the current one.
+  const isFromOtherCaller =
+    currentCallerPhone &&
+    session.sourceCallerPhone &&
+    normalisePhone(currentCallerPhone) !==
+      normalisePhone(session.sourceCallerPhone);
+  const callerLabel = isFromOtherCaller
+    ? ` [from colleague: ${session.sourceCallerPhone}]`
+    : "";
 
   if (session.result) {
     const r = session.result;
     const parts: string[] = [
-      `${date} — maturity ${r.overallScore}/100 (${r.overallMaturityLevel}).`,
+      `${date}${callerLabel} — maturity ${r.overallScore}/100 (${r.overallMaturityLevel}).`,
     ];
     if (r.executiveSummary) {
       const summary = r.executiveSummary.trim();
@@ -100,7 +123,7 @@ function detailSession(session: DiagnosticSession): string | null {
     .join("\n");
   const truncated =
     turns.length > TRANSCRIPT_FALLBACK_TURNS ? "\n… (transcript truncated)" : "";
-  return `${date} — (not yet analysed)\n${slice}${truncated}`;
+  return `${date}${callerLabel} — (not yet analysed)\n${slice}${truncated}`;
 }
 
 /** One zone-2 line: latest analysed maturity for another function. */
@@ -128,6 +151,10 @@ function otherFunctionLines(
  *                         (Callers scope this — e.g. per-caller for phone calls.)
  * @param allSessions      Company-wide sessions used to derive zone-2 maturity
  *                         lines for the other functions.
+ * @param currentCallerPhone Optional: the phone number of the caller on this call.
+ *                          If provided, sessions from other callers are labeled
+ *                          as "[from colleague: +44...]" so the agent knows to
+ *                          reference them as external input.
  *
  * Returns "" when there's nothing worth recalling.
  */
@@ -136,15 +163,17 @@ export function buildCompanyBrief({
   fn,
   functionSessions,
   allSessions,
+  currentCallerPhone,
 }: {
   companyName: string;
   fn: DiagnosticFunction;
   functionSessions: DiagnosticSession[];
   allSessions: DiagnosticSession[];
+  currentCallerPhone?: string;
 }): string {
   const detailed = newestFirst(functionSessions)
     .slice(0, MAX_DETAIL_SESSIONS)
-    .map(detailSession)
+    .map((s) => detailSession(s, currentCallerPhone))
     .filter((s): s is string => Boolean(s));
 
   const others = otherFunctionLines(fn, allSessions);
