@@ -326,6 +326,24 @@ export async function createCompany(
   );
 }
 
+export async function deleteCompany(id: string): Promise<boolean> {
+  return tryFs(
+    async () => {
+      await fs.deleteCompany(id);
+      return true;
+    },
+    () => {
+      if (!companyDb().has(id)) return false;
+      companyDb().delete(id);
+      // Remove all sessions belonging to this company from the in-memory store.
+      for (const [sid, s] of db().entries()) {
+        if (s.companyId === id) db().delete(sid);
+      }
+      return true;
+    },
+  );
+}
+
 export async function updateCompany(
   id: string,
   patch: Partial<Company>,

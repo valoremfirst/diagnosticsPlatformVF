@@ -6,6 +6,7 @@ import {
   elevenLabsApiConfigured,
   listLongConversations,
 } from "@/lib/elevenlabs-transcripts";
+import { listSessions } from "@/lib/store";
 import type { DiagnosticFunction } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -53,7 +54,21 @@ export async function GET(req: Request) {
       fn,
       Number.isFinite(minMinutes) ? minMinutes : 15,
     );
-    return NextResponse.json({ conversations });
+
+    // Exclude conversations already imported by any company. Since agents are
+    // shared across companies, without this filter every unimported conversation
+    // would be pulled into whichever company's section the admin opens next.
+    const allSessions = await listSessions();
+    const alreadyImported = new Set(
+      allSessions
+        .filter((s) => s.function === fn && s.sourceConversationId)
+        .map((s) => s.sourceConversationId as string),
+    );
+    const available = conversations.filter(
+      (c) => !alreadyImported.has(c.conversationId),
+    );
+
+    return NextResponse.json({ conversations: available });
   } catch (err) {
     const message =
       err instanceof ElevenLabsError

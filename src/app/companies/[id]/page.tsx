@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { CompanyDashboardClient } from "@/components/company/CompanyDashboardClient";
 import { assertCompanyAccess } from "@/lib/auth";
@@ -16,6 +16,10 @@ export default async function CompanyPage({
   // Admins see any company; clients only their own (foreign IDs → notFound).
   const user = await assertCompanyAccess(params.id);
   const isAdmin = user.role === "admin";
+
+  // The dashboard is an admin working surface. Clients get the chromeless
+  // Oracle interview experience as their home — no sidebar, no dashboard.
+  if (!isAdmin) redirect(`/companies/${params.id}/interviews`);
 
   const company = await getCompany(params.id);
   if (!company) notFound();

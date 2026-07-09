@@ -16,6 +16,36 @@ export interface RadarDatum {
   benchmark?: number;
 }
 
+/** Split a label into up to two balanced lines so long names don't clip. */
+function wrapLabel(text: string): string[] {
+  const words = text.split(" ");
+  if (words.length < 2 || text.length <= 11) return [text];
+  const mid = Math.ceil(words.length / 2);
+  return [words.slice(0, mid).join(" "), words.slice(mid).join(" ")];
+}
+
+/** Custom angle-axis tick: wraps long labels and keeps recharts' anchoring. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function AngleTick({ x, y, textAnchor, payload }: any) {
+  const lines = wrapLabel(String(payload?.value ?? ""));
+  return (
+    <text
+      x={x}
+      y={y}
+      textAnchor={textAnchor}
+      fill="#4A4A4A"
+      fontSize={11}
+      fontWeight={500}
+    >
+      {lines.map((line, i) => (
+        <tspan key={i} x={x} dy={i === 0 ? (lines.length > 1 ? -1 : 4) : 12}>
+          {line}
+        </tspan>
+      ))}
+    </text>
+  );
+}
+
 export function RadarScoreChart({
   data,
   accent = "#1E4D5A",
@@ -49,11 +79,15 @@ export function RadarScoreChart({
       </div>
       <div className="h-[340px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <RadarChart data={data} outerRadius="72%">
+          <RadarChart
+            data={data}
+            outerRadius="68%"
+            margin={{ top: 20, right: 68, bottom: 20, left: 68 }}
+          >
             <PolarGrid stroke="#E8E6E0" />
             <PolarAngleAxis
               dataKey="label"
-              tick={{ fill: "#4A4A4A", fontSize: 12 }}
+              tick={(props) => <AngleTick {...props} />}
             />
             <PolarRadiusAxis
               domain={[0, 100]}

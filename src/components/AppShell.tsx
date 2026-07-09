@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { getCurrentUser } from "@/lib/auth";
 import { getCompany, listCompanies } from "@/lib/store";
 
+import { ClientTopNav } from "./ClientTopNav";
 import { SidebarNav } from "./SidebarNav";
 import { TopBar } from "./TopBar";
 
@@ -11,6 +12,12 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
 
   // The login route renders bare (no nav chrome, no data).
   if (pathname === "/login" || pathname.startsWith("/login/")) {
+    return <div className="min-h-screen bg-canvas">{children}</div>;
+  }
+
+  // The client interview experience is a full-bleed, chromeless canvas that
+  // brings its own minimal top nav (per the Oracle wireframe) — no sidebar.
+  if (/^\/companies\/[^/]+\/interviews(\/|$)/.test(pathname)) {
     return <div className="min-h-screen bg-canvas">{children}</div>;
   }
 
@@ -24,30 +31,35 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
 
   const isAdmin = user.role === "admin";
 
-  // Admins see the whole portfolio; clients see only their own company.
-  const companies = isAdmin
-    ? (await listCompanies()).map((c) => ({
-        id: c.id,
-        name: c.name,
-        shortName: c.shortName,
-        brandColor: c.brandColor,
-        profilePicture: c.profilePicture,
-      }))
-    : user.companyId
-      ? await getCompany(user.companyId).then((c) =>
-          c
-            ? [
-                {
-                  id: c.id,
-                  name: c.name,
-                  shortName: c.shortName,
-                  brandColor: c.brandColor,
-                  profilePicture: c.profilePicture,
-                },
-              ]
-            : [],
-        )
-      : [];
+  // Clients get a fully chromeless experience — no left sidebar, ever. Their
+  // home is the Oracle interview page (handled bare above); any other client
+  // page renders under the same minimal top nav.
+  if (!isAdmin) {
+    const company = user.companyId
+      ? await getCompany(user.companyId)
+      : undefined;
+    return (
+      <div className="min-h-screen bg-canvas paper-texture">
+        <ClientTopNav
+          companyId={company?.id}
+          companyName={company?.name ?? ""}
+          email={user.email}
+        />
+        <main className="mx-auto w-full max-w-[1180px] px-6 pb-16 lg:px-8">
+          {children}
+        </main>
+      </div>
+    );
+  }
+
+  // Admins see the whole portfolio in the sidebar.
+  const companies = (await listCompanies()).map((c) => ({
+    id: c.id,
+    name: c.name,
+    shortName: c.shortName,
+    brandColor: c.brandColor,
+    profilePicture: c.profilePicture,
+  }));
 
   return (
     <div className="flex min-h-screen bg-canvas">

@@ -16,6 +16,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import type { SectionView } from "@/components/company/CompanyDashboardClient";
+import { TextChatInterview } from "@/components/company/TextChatInterview";
 import { Card } from "@/components/ui/Card";
 import { withAlpha } from "@/lib/color";
 import { cn, formatDate, MATURITY_LABEL, scoreTone } from "@/lib/utils";
@@ -303,6 +304,14 @@ export function SectionDetail({
                     ? "Sync failed"
                     : "Auto-synced"}
               </span>
+                  <TextChatInterview
+                    companyId={companyId}
+                    fn={fn}
+                    agentName={section.agentName}
+                    agentTitle={section.agentTitle}
+                    brand={brand}
+                    onImported={onChanged}
+                  />
                   {!adding && (
                     <button
                       type="button"

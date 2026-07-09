@@ -1,6 +1,6 @@
 "use client";
 
-import { History, LayoutGrid, Mic, Settings2 } from "lucide-react";
+import { BarChart3, History, LayoutGrid, Mic, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -17,6 +17,7 @@ interface CompanyNav {
 
 const NAV = [
   { href: "/", label: "Overview", icon: LayoutGrid, match: (p: string) => p === "/" },
+  { href: "/analytics", label: "Analytics", icon: BarChart3, match: (p: string) => p.startsWith("/analytics") },
   { href: "/history", label: "History", icon: History, match: (p: string) => p.startsWith("/history") },
   { href: "/admin", label: "Admin", icon: Settings2, match: (p: string) => p.startsWith("/admin") },
 ];
@@ -35,16 +36,27 @@ export function SidebarNav({
 
   return (
     <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-line bg-surface px-5 py-6 lg:flex print:hidden">
-      <Link href="/" className="block px-2">
-        <div className="font-display text-2xl leading-tight text-teal">
-          Agentic
-          <br />
-          Diagnostics
+      <Link
+        href="/"
+        className="group focus-ring block rounded-xl px-2 py-1 transition-colors hover:bg-surface-muted/50"
+      >
+        <div className="flex items-center gap-2.5">
+          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-gradient-to-br from-gold to-teal transition-transform group-hover:scale-110" />
+          <div className="font-display text-2xl leading-[1.05] text-teal">
+            Agentic
+            <br />
+            Diagnostics
+          </div>
         </div>
-        <div className="mt-1 text-xs text-ink-muted">By ValoremFirst</div>
+        <div className="mt-1.5 pl-[19px] text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
+          By ValoremFirst
+        </div>
       </Link>
 
-      <nav className={cn("mt-9 flex flex-col gap-1", !isAdmin && "hidden")}>
+      <nav className={cn("mt-8 flex flex-col gap-0.5", !isAdmin && "hidden")}>
+        <div className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-faint">
+          Menu
+        </div>
         {NAV.map((item) => {
           const active = item.match(pathname);
           const Icon = item.icon;
@@ -52,47 +64,79 @@ export function SidebarNav({
             <Link
               key={item.href}
               href={item.href}
+              aria-current={active ? "page" : undefined}
               className={cn(
-                "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                "focus-ring group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
                 active
                   ? "bg-teal-tint text-teal"
                   : "text-ink-soft hover:bg-surface-muted hover:text-ink",
               )}
             >
-              {active && (
-                <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-teal" />
-              )}
-              <Icon className="h-[18px] w-[18px]" strokeWidth={active ? 2.2 : 1.8} />
+              <span
+                className={cn(
+                  "absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-teal transition-all duration-200",
+                  active ? "opacity-100" : "opacity-0",
+                )}
+              />
+              <Icon
+                className={cn(
+                  "h-[18px] w-[18px] transition-transform",
+                  !active && "group-hover:scale-110",
+                )}
+                strokeWidth={active ? 2.2 : 1.8}
+              />
               {item.label}
             </Link>
           );
         })}
       </nav>
 
-      {/* Clients: a prominent, friendly entry point to do their interviews. */}
+      {/* Clients: a prominent, friendly entry point to do their interviews
+          and review their own analytics. */}
       {!isAdmin && companies[0] && (
         <nav className="mt-9 flex flex-col gap-1">
-          {(() => {
-            const href = `/companies/${companies[0].id}/interviews`;
+          {[
+            {
+              href: `/companies/${companies[0].id}/interviews`,
+              label: "Interviews",
+              icon: Mic,
+            },
+            {
+              href: `/companies/${companies[0].id}/analytics`,
+              label: "Analytics",
+              icon: BarChart3,
+            },
+          ].map(({ href, label, icon: Icon }) => {
             const active = pathname.startsWith(href);
             return (
               <Link
+                key={href}
                 href={href}
+                aria-current={active ? "page" : undefined}
                 className={cn(
-                  "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
+                  "focus-ring group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all",
                   active
                     ? "bg-teal-tint text-teal"
                     : "text-ink-soft hover:bg-surface-muted hover:text-ink",
                 )}
               >
-                {active && (
-                  <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-teal" />
-                )}
-                <Mic className="h-[18px] w-[18px]" strokeWidth={active ? 2.2 : 1.8} />
-                Interviews
+                <span
+                  className={cn(
+                    "absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-teal transition-all duration-200",
+                    active ? "opacity-100" : "opacity-0",
+                  )}
+                />
+                <Icon
+                  className={cn(
+                    "h-[18px] w-[18px] transition-transform",
+                    !active && "group-hover:scale-110",
+                  )}
+                  strokeWidth={active ? 2.2 : 1.8}
+                />
+                {label}
               </Link>
             );
-          })()}
+          })}
         </nav>
       )}
 
@@ -104,11 +148,13 @@ export function SidebarNav({
         <div className="flex flex-col gap-1">
           {companies.map((c) => {
             const href = `/companies/${c.id}`;
-            // Active on the company dashboard, but not on its /interviews sub-page.
+            // Active on the company dashboard, but not on its /interviews or
+            // /analytics sub-pages (those get their own nav entries).
             const active =
               pathname === href ||
               (pathname.startsWith(`${href}/`) &&
-                !pathname.startsWith(`${href}/interviews`));
+                !pathname.startsWith(`${href}/interviews`) &&
+                !pathname.startsWith(`${href}/analytics`));
             return (
               <Link
                 key={c.id}
@@ -148,16 +194,27 @@ export function SidebarNav({
         </div>
       </div>
 
-      <div className="mt-auto">
-        <div className="flex items-center gap-3 border-t border-line px-1 pt-5">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-deep text-sm font-semibold uppercase text-white">
+      <div className="mt-auto pt-5">
+        <div className="flex items-center gap-3 rounded-xl border border-line bg-surface-sunken/60 px-3 py-2.5">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-deep to-teal text-sm font-semibold uppercase text-white ring-2 ring-white">
             {initials(user.email)}
           </div>
           <div className="min-w-0 leading-tight">
-            <div className="truncate text-sm font-medium text-ink" title={user.email}>
+            <div
+              className="truncate text-sm font-medium text-ink"
+              title={user.email}
+            >
               {user.email}
             </div>
-            <div className="text-xs capitalize text-ink-muted">{role}</div>
+            <div className="flex items-center gap-1 text-xs capitalize text-ink-muted">
+              <span
+                className={cn(
+                  "h-1.5 w-1.5 rounded-full",
+                  isAdmin ? "bg-teal" : "bg-sage",
+                )}
+              />
+              {role}
+            </div>
           </div>
         </div>
       </div>

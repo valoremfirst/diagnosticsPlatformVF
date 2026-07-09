@@ -78,6 +78,20 @@ export async function resolveAgentId(
   return getServerAgentId(fn);
 }
 
+/**
+ * Resolve an agent by arbitrary key — used for George (the general agent) which
+ * sits outside the DiagnosticFunction union. Priority: Firestore → env var.
+ */
+export async function resolveAgentByKey(
+  key: string,
+): Promise<string | undefined> {
+  const global = await getGlobalAgentConfig();
+  const fromFirestore = (global.agentIds as Record<string, string | undefined>)?.[key];
+  if (fromFirestore?.trim()) return fromFirestore.trim();
+  const envVar = `ELEVENLABS_AGENT_ID_${key.toUpperCase().replace(/-/g, "_")}`;
+  return process.env[envVar] || undefined;
+}
+
 export function elevenLabsApiConfigured(): boolean {
   return Boolean(process.env.ELEVENLABS_API_KEY);
 }

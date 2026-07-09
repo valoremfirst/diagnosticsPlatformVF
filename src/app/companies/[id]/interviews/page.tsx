@@ -52,6 +52,7 @@ export default async function InterviewsPage({
       brand={company.brandColor}
       interviews={interviews}
       isAdmin={user.role === "admin"}
+      userEmail={user.email}
     />
   );
 }

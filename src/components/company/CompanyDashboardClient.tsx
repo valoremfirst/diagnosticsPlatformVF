@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Check, Pencil, X } from "lucide-react";
+import { Building2, Check, Loader2, Pencil, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, useState } from "react";
 
@@ -70,6 +70,8 @@ export function CompanyDashboardClient({
   readOnly?: boolean;
 }) {
   const router = useRouter();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [savedColor, setSavedColor] = useState(company.brandColor);
   const [preview, setPreview] = useState<string | null>(null);
   const [activeFn, setActiveFn] = useState<DiagnosticFunction>(
@@ -108,6 +110,18 @@ export function CompanyDashboardClient({
       body: JSON.stringify({ description: descDraft }),
     });
     router.refresh();
+  }
+
+  async function removeCompany() {
+    setDeleting(true);
+    try {
+      await fetch(`/api/companies/${company.id}`, { method: "DELETE" });
+      router.push("/");
+      router.refresh();
+    } finally {
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
   }
 
   async function savePicture() {
@@ -283,6 +297,15 @@ export function CompanyDashboardClient({
                   onPreview={(hex) => setPreview(hex)}
                   onSave={saveColor}
                 />
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-white/20"
+                  style={{ color: withAlpha(ink, 0.7) }}
+                  title="Delete company"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
             )}
             <div
@@ -400,53 +423,81 @@ export function CompanyDashboardClient({
 
       {/* Diagnostic sections as in-page tabs */}
       <section>
-        <div className="mb-3">
-          <h2 className="font-display text-xl text-ink">Diagnostic sections</h2>
-          <p className="mt-0.5 text-sm text-ink-muted">
-            Select a function to manage its transcripts and review detail
-          </p>
+        <div className="section-rule mb-4">
+          <span className="eyebrow">Diagnostic sections</span>
+          <span className="hidden text-xs text-ink-faint sm:inline">
+            {sections.filter((s) => s.avgScore != null).length} of{" "}
+            {sections.length} scored
+          </span>
         </div>
 
-        {/* Tab strip */}
-        <div className="flex flex-wrap gap-2 border-b border-line">
+        {/* Tab strip — horizontally scrollable for the full function set. Each
+            tab carries its own scored / draft / empty state as a chip, and the
+            active tab gets a brand-tinted surface + underline. */}
+        <div
+          role="tablist"
+          aria-label="Diagnostic sections"
+          className="scroll-slim -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-2"
+        >
           {sections.map((s) => {
             const active = s.fn === activeFn;
+            const scored = s.avgScore != null;
+            const tone = scored ? scoreTone(s.avgScore as number) : null;
             return (
               <button
                 key={s.fn}
                 type="button"
+                role="tab"
+                aria-selected={active}
                 onClick={() => setActiveFn(s.fn)}
                 className={cn(
-                  "group relative -mb-px flex items-center gap-2 rounded-t-lg px-4 py-2.5 text-sm font-medium transition-colors",
+                  "group relative flex shrink-0 items-center gap-2 rounded-xl border px-3.5 py-2.5 text-sm font-medium transition-all duration-200",
                   active
-                    ? "text-ink"
-                    : "text-ink-muted hover:text-ink-soft",
+                    ? "border-transparent bg-surface text-ink shadow-card"
+                    : "border-transparent text-ink-muted hover:bg-surface-muted hover:text-ink",
                 )}
+                style={
+                  active
+                    ? {
+                        boxShadow: `0 1px 2px rgba(26,26,26,0.04), 0 1px 8px rgba(26,26,26,0.05)`,
+                        borderColor: withAlpha(brand, 0.35),
+                      }
+                    : undefined
+                }
               >
-                {s.label}
-                {s.avgScore != null ? (
+                <span className="whitespace-nowrap">{s.label}</span>
+
+                {/* State chip: score / draft count / empty dot */}
+                {scored ? (
                   <span
                     className={cn(
-                      "rounded px-1.5 py-0.5 text-[11px] font-semibold",
-                      scoreTone(s.avgScore).bg,
-                      scoreTone(s.avgScore).text,
+                      "rounded-md px-1.5 py-0.5 text-[11px] font-bold tabular-nums",
+                      tone?.bg,
+                      tone?.text,
                     )}
                   >
                     {s.avgScore}
                   </span>
+                ) : s.transcripts.length > 0 ? (
+                  <span className="rounded-md bg-gold/10 px-1.5 py-0.5 text-[11px] font-bold text-gold">
+                    {s.transcripts.length} draft
+                  </span>
                 ) : (
-                  s.transcripts.length > 0 && (
-                    <span className="rounded bg-surface-muted px-1.5 py-0.5 text-[11px] font-semibold text-ink-faint">
-                      {s.transcripts.length}
-                    </span>
-                  )
-                )}
-                {active && (
                   <span
-                    className="absolute inset-x-0 -bottom-px h-0.5 rounded-full"
-                    style={{ background: brand }}
+                    aria-hidden
+                    className="h-1.5 w-1.5 rounded-full bg-line-strong transition-colors group-hover:bg-ink-faint"
                   />
                 )}
+
+                {/* Active underline in brand colour */}
+                <span
+                  aria-hidden
+                  className={cn(
+                    "absolute inset-x-3 -bottom-2 h-0.5 rounded-full transition-all duration-200",
+                    active ? "opacity-100" : "opacity-0",
+                  )}
+                  style={{ background: brand }}
+                />
               </button>
             );
           })}
@@ -454,7 +505,31 @@ export function CompanyDashboardClient({
 
         {/* Active tab panel */}
         {activeSection && (
-          <Card className="rounded-t-none border-t-0">
+          <Card className="mt-2 overflow-hidden">
+            {/* Panel header echoing the active agent identity */}
+            <div className="flex items-center gap-2.5 border-b border-line bg-surface-sunken/50 px-6 py-3">
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{ background: brand }}
+              />
+              <span className="font-display text-base text-ink">
+                {activeSection.label}
+              </span>
+              <span className="text-xs text-ink-muted">
+                · {activeSection.agentName}, {activeSection.agentTitle}
+              </span>
+              {activeSection.avgScore != null && (
+                <span
+                  className={cn(
+                    "ml-auto rounded-full px-2.5 py-0.5 text-xs font-semibold",
+                    scoreTone(activeSection.avgScore).bg,
+                    scoreTone(activeSection.avgScore).text,
+                  )}
+                >
+                  {activeSection.avgScore}/100
+                </span>
+              )}
+            </div>
             <SectionDetail
               key={activeSection.fn}
               companyId={company.id}
@@ -466,6 +541,43 @@ export function CompanyDashboardClient({
           </Card>
         )}
       </section>
+
+      {/* Delete confirmation modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
+            onClick={() => !deleting && setConfirmDelete(false)}
+          />
+          <div className="relative z-10 w-full max-w-sm overflow-hidden rounded-2xl border border-line bg-surface shadow-card-hover">
+            <div className="px-6 py-5">
+              <h2 className="font-display text-xl text-ink">Delete company?</h2>
+              <p className="mt-2 text-sm text-ink-muted">
+                This will permanently delete <strong className="text-ink">{company.name}</strong> and all its transcripts and diagnostics. This cannot be undone.
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-line px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(false)}
+                disabled={deleting}
+                className="h-10 rounded-xl px-4 text-sm font-medium text-ink-muted hover:bg-surface-muted disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={removeCompany}
+                disabled={deleting}
+                className="inline-flex h-10 items-center gap-2 rounded-xl bg-danger px-5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                Delete company
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

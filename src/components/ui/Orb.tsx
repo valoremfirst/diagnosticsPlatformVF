@@ -5,6 +5,40 @@ import { useEffect, useId, useRef } from "react";
 export type OrbAgent = "george" | "margot" | "iain" | "priya";
 export type OrbState = "idle" | "listening" | "thinking" | "error";
 
+/**
+ * Map a diagnostic function to one of the four orb palettes so each business
+ * function reads with a distinct agent identity across the app (interview
+ * cards, tabs, etc.). Cycles the four palettes deterministically.
+ */
+export function orbAgentForFunction(fn: string): OrbAgent {
+  const map: Record<string, OrbAgent> = {
+    finance: "george",
+    legal: "iain",
+    it: "iain",
+    "operational-delivery": "priya",
+    sales: "george",
+    leadership: "margot",
+    culture: "priya",
+    presales: "margot",
+  };
+  return map[fn] ?? "george";
+}
+
+/**
+ * A solid, button-safe accent per function that matches the agent's orb palette
+ * (deep enough for white text on cream). Lets surrounding chrome — CTAs, chips,
+ * hints — read as one cohesive identity with the orb currently on screen.
+ */
+export function orbAccentForFunction(fn: string): string {
+  const accents: Record<OrbAgent, string> = {
+    george: "#C94D0E", // molten orange — the ValoremFirst signature
+    margot: "#B4701C", // deep amber
+    iain: "#3E4E86", // deep indigo
+    priya: "#2F6B4E", // deep green
+  };
+  return accents[orbAgentForFunction(fn)];
+}
+
 const AGENTS: Record<
   OrbAgent,
   {

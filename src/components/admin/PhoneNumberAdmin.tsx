@@ -70,18 +70,17 @@ export function PhoneNumberAdmin({
   }
 
   return (
-    <Card className="p-5">
-      <div className="mb-4 flex items-center justify-between gap-4">
-        <p className="text-sm text-ink-muted">
-          Map a client&apos;s inbound phone number to their company, so a shared
-          interview agent attributes each call to the right client. Unregistered
-          callers start with a clean slate (no prior-conversation memory).
+    <Card className="overflow-hidden p-0">
+      <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-4">
+        <p className="max-w-xl text-sm text-ink-muted">
+          Unregistered callers start with a clean slate — no prior-conversation
+          memory.
         </p>
         {!adding && (
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-teal px-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            className="btn-teal h-9 shrink-0"
           >
             <Plus className="h-4 w-4" />
             Add number
@@ -89,6 +88,7 @@ export function PhoneNumberAdmin({
         )}
       </div>
 
+      <div className="p-5">
       {adding && (
         <Card className="mb-4 border-dashed p-4">
           <div className="mb-3 flex items-center justify-between">
@@ -114,7 +114,7 @@ export function PhoneNumberAdmin({
               onChange={(e) => setPhoneNumber(e.target.value)}
               placeholder="+44 20 1234 5678"
               autoComplete="off"
-              className="h-10 rounded-xl border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-faint focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-tint"
+              className="input-editorial h-10"
             />
             <input
               type="text"
@@ -122,12 +122,12 @@ export function PhoneNumberAdmin({
               onChange={(e) => setLabel(e.target.value)}
               placeholder="Label (optional), e.g. Jane Doe, CFO"
               autoComplete="off"
-              className="h-10 rounded-xl border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-faint focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-tint"
+              className="input-editorial h-10"
             />
             <select
               value={companyId}
               onChange={(e) => setCompanyId(e.target.value)}
-              className="h-10 rounded-xl border border-line bg-surface px-3 text-sm text-ink focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-tint sm:col-span-2"
+              className="input-editorial h-10 sm:col-span-2"
             >
               {companies.length === 0 && <option value="">No companies</option>}
               {companies.map((c) => (
@@ -145,7 +145,7 @@ export function PhoneNumberAdmin({
               <button
                 type="submit"
                 disabled={busy || !companyId}
-                className="inline-flex h-10 items-center gap-2 rounded-xl bg-teal px-5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                className="btn-teal h-10 px-5"
               >
                 {busy ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -172,15 +172,26 @@ export function PhoneNumberAdmin({
           <tbody>
             {mappings.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-ink-muted">
-                  No phone numbers registered yet.
+                <td colSpan={4} className="px-4 py-12">
+                  <div className="flex flex-col items-center gap-2 text-center">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-muted text-ink-faint">
+                      <Phone className="h-5 w-5" />
+                    </span>
+                    <p className="text-sm font-medium text-ink-soft">
+                      No callers registered
+                    </p>
+                    <p className="max-w-xs text-xs text-ink-muted">
+                      Map a phone number to a company so the agent can attribute
+                      each call and recall prior conversations.
+                    </p>
+                  </div>
                 </td>
               </tr>
             ) : (
               mappings.map((m) => (
                 <tr
                   key={m.phoneNumber}
-                  className="border-b border-line last:border-0"
+                  className="border-b border-line transition-colors last:border-0 hover:bg-surface-muted/40"
                 >
                   <td className="px-4 py-3 font-mono text-[13px] font-medium text-ink">
                     {m.phoneNumber}
@@ -212,6 +223,7 @@ export function PhoneNumberAdmin({
             )}
           </tbody>
         </table>
+      </div>
       </div>
     </Card>
   );

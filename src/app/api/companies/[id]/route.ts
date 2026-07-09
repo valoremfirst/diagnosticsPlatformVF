@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { apiRequireAdmin, apiRequireCompanyAccess } from "@/lib/auth";
-import { getCompany, updateCompany } from "@/lib/store";
+import { deleteCompany, getCompany, updateCompany } from "@/lib/store";
 import type { Company } from "@/lib/types";
 
 const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
@@ -71,4 +71,21 @@ export async function PATCH(
 
   const updated = await updateCompany(params.id, patch);
   return NextResponse.json({ company: updated });
+}
+
+// DELETE /api/companies/:id — permanently remove the company and all its sessions (admin only).
+export async function DELETE(
+  _req: Request,
+  { params }: { params: { id: string } },
+) {
+  const gate = await apiRequireAdmin();
+  if ("response" in gate) return gate.response;
+
+  const company = await getCompany(params.id);
+  if (!company) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
+
+  await deleteCompany(params.id);
+  return new NextResponse(null, { status: 204 });
 }

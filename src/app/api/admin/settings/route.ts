@@ -36,13 +36,14 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const agentIds: Partial<Record<DiagnosticFunction, string>> = {};
+  const agentIds: Record<string, string> = {};
   if (body.agentIds && typeof body.agentIds === "object") {
     const raw = body.agentIds as Record<string, unknown>;
-    for (const fn of VALID_FUNCTIONS) {
-      const v = raw[fn];
+    const allowedKeys = [...VALID_FUNCTIONS, "george"];
+    for (const key of allowedKeys) {
+      const v = raw[key];
       // Empty string clears the value; undefined means "not in payload, leave alone".
-      if (typeof v === "string") agentIds[fn] = v.trim();
+      if (typeof v === "string") agentIds[key] = v.trim();
     }
   }
 

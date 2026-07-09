@@ -1,8 +1,16 @@
 "use client";
 
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { AlertCircle, ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import {
+  AlertCircle,
+  ArrowRight,
+  Eye,
+  EyeOff,
+  Loader2,
+  MessageSquareText,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import { useState } from "react";
 
 import { Orb, type OrbState } from "@/components/ui/Orb";
@@ -21,8 +29,25 @@ const C = {
   danger: "#A84A3D",
 };
 
+const HIGHLIGHTS = [
+  {
+    icon: MessageSquareText,
+    title: "Voice-led diagnostics",
+    body: "Relaxed conversations with an AI consultant — no forms to fill.",
+  },
+  {
+    icon: Sparkles,
+    title: "Framework-scored maturity",
+    body: "Every interview graded against the standards that matter to you.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Private to your business",
+    body: "You see only your company. Findings stay confidential.",
+  },
+];
+
 export function LoginForm() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -44,7 +69,11 @@ export function LoginForm() {
     setBusy(true);
     setError(null);
     try {
-      const cred = await signInWithEmailAndPassword(clientAuth(), email.trim(), password);
+      const cred = await signInWithEmailAndPassword(
+        clientAuth(),
+        email.trim(),
+        password,
+      );
       const idToken = await cred.user.getIdToken();
 
       const res = await fetch("/api/auth/session", {
@@ -62,8 +91,10 @@ export function LoginForm() {
         claims.role === "client" && typeof claims.companyId === "string"
           ? `/companies/${claims.companyId}`
           : "/";
-      router.replace(dest);
-      router.refresh();
+      // Hard navigation (not router.replace + refresh) — the RSC transition was
+      // briefly double-rendering the login screen over the destination. A full
+      // load is clean and lets middleware set fresh chrome headers.
+      window.location.assign(dest);
     } catch (err) {
       setError(friendlyError((err as Error).message));
       setBusy(false);
@@ -73,247 +104,144 @@ export function LoginForm() {
   const canSubmit = !busy && email.length > 0 && password.length > 0;
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        backgroundColor: C.canvas,
-        backgroundImage: `
-          radial-gradient(ellipse 60% 45% at 50% 12%, rgba(245,133,42,0.12), transparent 58%),
-          radial-gradient(ellipse 90% 55% at 50% 112%, rgba(30,77,90,0.05), transparent 65%)
-        `,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "48px 24px",
-        position: "relative",
-      }}
-    >
-      {/* Wordmark */}
-      <div
-        style={{
-          position: "absolute",
-          top: 30,
-          left: 36,
-          fontFamily: "var(--font-display, Georgia, serif)",
-          fontSize: 19,
-          letterSpacing: "-0.01em",
-          color: C.ink,
-          textTransform: "lowercase",
-        }}
-      >
-        valorem<span style={{ color: C.orange }}>first</span>
-      </div>
+    <div className="lf-root">
+      {/* ── Brand panel (left on desktop, top on mobile) ──────────────────── */}
+      <aside className="lf-brand">
+        <div className="lf-brand-veil" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="https://www.scottishconstructionnow.com/uploads/Valorem%20First%20banner.png" alt="ValoremFirst" className="lf-logo" />
 
-      {/* Centred canvas column — orb + editorial heading + form, no card */}
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 348,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          textAlign: "center",
-        }}
-      >
-        <div style={{ animation: "lf-rise 0.7s cubic-bezier(0.22,1,0.36,1) both" }}>
-          <Orb agent="george" state={orbState} size={132} />
+        <div className="lf-brand-inner">
+          <div className="lf-orb-wrap">
+            <Orb agent="george" state={orbState} size={132} />
+          </div>
+
+          <p className="lf-eyebrow">Agentic Diagnostics Platform</p>
+          <h2 className="lf-brand-title">
+            A calmer way to read your business.
+          </h2>
+          <div className="lf-rule" />
+          <p className="lf-brand-lede">
+            Voice-led interviews, scored against proven maturity frameworks, and
+            surfaced as clear risks and recommendations.
+          </p>
+
+          <ul className="lf-highlights">
+            {HIGHLIGHTS.map((h, i) => {
+              const Icon = h.icon;
+              return (
+                <li
+                  key={h.title}
+                  className="lf-highlight"
+                  style={{ animationDelay: `${260 + i * 90}ms` }}
+                >
+                  <span className="lf-highlight-icon">
+                    <Icon size={16} />
+                  </span>
+                  <span>
+                    <span className="lf-highlight-title">{h.title}</span>
+                    <span className="lf-highlight-body">{h.body}</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         </div>
 
-        <div
-          style={{
-            marginTop: -6,
-            animation: "lf-rise 0.7s cubic-bezier(0.22,1,0.36,1) 90ms both",
-          }}
-        >
-          <p
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: "0.18em",
-              textTransform: "uppercase",
-              color: C.orange,
-              margin: 0,
-            }}
-          >
-            Agentic Diagnostics
-          </p>
-          <h1
-            style={{
-              fontFamily: "var(--font-display, Georgia, serif)",
-              fontSize: 42,
-              fontWeight: 400,
-              lineHeight: 1.05,
-              letterSpacing: "-0.03em",
-              color: C.ink,
-              margin: "16px 0 0",
-            }}
-          >
-            Sign In
-          </h1>
-          <div style={{ width: 52, height: 1, background: C.orange, margin: "22px auto 0", opacity: 0.85 }} />
-          <p
-            style={{
-              fontFamily: "var(--font-text, Georgia, serif)",
-              fontSize: 15,
-              fontStyle: "italic",
-              lineHeight: 1.6,
-              color: C.inkMuted,
-              margin: "20px auto 0",
-              maxWidth: 300,
-            }}
-          >
-            Sign in with the credentials provided by your consultant.
-          </p>
-        </div>
+        <p className="lf-brand-foot">
+          Trouble signing in? Contact your ValoremFirst consultant.
+        </p>
+      </aside>
 
-        <form
-          onSubmit={submit}
-          style={{
-            width: "100%",
-            marginTop: 40,
-            display: "flex",
-            flexDirection: "column",
-            gap: 26,
-            animation: "lf-rise 0.7s cubic-bezier(0.22,1,0.36,1) 180ms both",
-          }}
-        >
-          <Field
-            label="Email"
-            type="email"
-            value={email}
-            onChange={setEmail}
-            autoComplete="email"
-            autoFocus
-            placeholder="you@company.com"
-          />
+      {/* ── Form panel ────────────────────────────────────────────────────── */}
+      <main className="lf-form-panel">
+        <div className="lf-form-col">
+          {/* Compact orb shows on mobile where the brand panel is condensed */}
+          <div className="lf-mobile-orb">
+            <Orb agent="george" state={orbState} size={104} interactive={false} />
+          </div>
 
-          <Field
-            label="Password"
-            type={showPw ? "text" : "password"}
-            value={password}
-            onChange={setPassword}
-            autoComplete="current-password"
-            placeholder="Enter your password"
-            onKeyEvent={(e) => setCapsOn(e.getModifierState("CapsLock"))}
-            rightSlot={
-              <button
-                type="button"
-                onClick={() => setShowPw((s) => !s)}
-                aria-label={showPw ? "Hide password" : "Show password"}
-                style={{
-                  position: "absolute",
-                  right: 14,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  border: "none",
-                  background: "transparent",
-                  color: C.inkFaint,
-                  cursor: "pointer",
-                  padding: 4,
-                  display: "flex",
-                  alignItems: "center",
-                }}
-              >
-                {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            }
-            hint={
-              capsOn ? (
-                <span style={{ color: C.danger, fontSize: 11.5, fontWeight: 500 }}>
-                  Caps Lock is on
-                </span>
-              ) : null
-            }
-          />
+          <div className="lf-form-head">
+            <p className="lf-form-eyebrow">Welcome back</p>
+            <h1 className="lf-form-title">Sign in</h1>
+            <p className="lf-form-sub">
+              Use the credentials provided by your consultant.
+            </p>
+          </div>
 
-          {error && (
-            <div
-              role="alert"
+          <form onSubmit={submit} className="lf-form">
+            <Field
+              label="Email"
+              type="email"
+              value={email}
+              onChange={setEmail}
+              autoComplete="email"
+              autoFocus
+              placeholder="you@company.com"
+            />
+
+            <Field
+              label="Password"
+              type={showPw ? "text" : "password"}
+              value={password}
+              onChange={setPassword}
+              autoComplete="current-password"
+              placeholder="Enter your password"
+              onKeyEvent={(e) => setCapsOn(e.getModifierState("CapsLock"))}
+              rightSlot={
+                <button
+                  type="button"
+                  onClick={() => setShowPw((s) => !s)}
+                  aria-label={showPw ? "Hide password" : "Show password"}
+                  className="lf-eye"
+                >
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              }
+              hint={
+                capsOn ? (
+                  <span className="lf-caps">Caps Lock is on</span>
+                ) : null
+              }
+            />
+
+            {error && (
+              <div role="alert" className="lf-error">
+                <AlertCircle size={15} style={{ flexShrink: 0 }} />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              className="lf-submit"
               style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 7,
-                fontSize: 13,
-                color: C.danger,
-                lineHeight: 1.45,
+                background: canSubmit ? C.orange : C.lineStrong,
+                cursor: canSubmit ? "pointer" : "not-allowed",
+                boxShadow: canSubmit
+                  ? "0 10px 24px rgba(201,77,14,0.28)"
+                  : "none",
               }}
             >
-              <AlertCircle size={15} style={{ flexShrink: 0 }} />
-              <span>{error}</span>
-            </div>
-          )}
+              {busy ? (
+                <Loader2 size={17} className="lf-spin" />
+              ) : (
+                <>
+                  Sign in
+                  <ArrowRight size={17} className="lf-arrow" />
+                </>
+              )}
+            </button>
+          </form>
 
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            className="lf-submit"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              height: 50,
-              width: "100%",
-              borderRadius: 8,
-              border: "none",
-              background: canSubmit ? C.orange : C.lineStrong,
-              color: "#fff",
-              fontSize: 14.5,
-              fontWeight: 600,
-              letterSpacing: "0.01em",
-              cursor: canSubmit ? "pointer" : "not-allowed",
-              boxShadow: canSubmit ? "0 8px 20px rgba(201,77,14,0.26)" : "none",
-              transition: "transform 180ms ease, box-shadow 180ms ease, filter 180ms ease",
-              marginTop: 6,
-            }}
-          >
-            {busy ? (
-              <Loader2 size={17} style={{ animation: "lf-spin 1s linear infinite" }} />
-            ) : (
-              <>
-                Sign in
-                <ArrowRight size={17} className="lf-arrow" />
-              </>
-            )}
-          </button>
-        </form>
+          <p className="lf-legal">
+            Protected access · Your session is encrypted end-to-end.
+          </p>
+        </div>
+      </main>
 
-      </div>
-
-      <p
-        style={{
-          position: "absolute",
-          bottom: 28,
-          fontSize: 12.5,
-          color: C.inkMuted,
-          textAlign: "center",
-        }}
-      >
-        Trouble signing in? Contact your ValoremFirst consultant.
-      </p>
-
-      <style>{`
-        @keyframes lf-rise { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes lf-spin { to{transform:rotate(360deg)} }
-        .lf-submit:not(:disabled):hover { transform:translateY(-1px); box-shadow:0 12px 28px rgba(201,77,14,0.32); filter:saturate(1.05); }
-        .lf-submit:not(:disabled):active { transform:translateY(0); }
-        .lf-submit:not(:disabled):hover .lf-arrow { transform:translateX(3px); }
-        .lf-arrow { transition: transform 180ms ease; }
-        .lf-input::placeholder { color:${C.inkFaint}; opacity:1; }
-        /* Override browser autofill — match our warm input background. */
-        .lf-input:-webkit-autofill,
-        .lf-input:-webkit-autofill:hover,
-        .lf-input:-webkit-autofill:focus {
-          -webkit-text-fill-color: ${C.ink};
-          -webkit-box-shadow: 0 0 0 1000px #F5F3EE inset;
-          box-shadow: 0 0 0 1000px #F5F3EE inset;
-          transition: background-color 9999s ease-in-out 0s;
-          caret-color: ${C.ink};
-          border-radius: 12px;
-        }
-      `}</style>
+      <style>{STYLES}</style>
     </div>
   );
 }
@@ -343,18 +271,10 @@ function Field({
 }) {
   const [focused, setFocused] = useState(false);
   return (
-    <div style={{ display: "flex", flexDirection: "column", textAlign: "left" }}>
+    <div className="lf-field">
       <span
-        style={{
-          fontSize: 10,
-          fontWeight: 700,
-          letterSpacing: "0.14em",
-          textTransform: "uppercase",
-          color: focused ? C.orange : C.inkMuted,
-          transition: "color 200ms ease",
-          userSelect: "none",
-          marginBottom: 8,
-        }}
+        className="lf-label"
+        style={{ color: focused ? C.orange : C.inkMuted }}
       >
         {label}
       </span>
@@ -372,30 +292,17 @@ function Field({
           autoFocus={autoFocus}
           placeholder={placeholder}
           style={{
-            display: "block",
-            width: "100%",
-            boxSizing: "border-box",
-            height: 52,
             padding: rightSlot ? "0 44px 0 16px" : "0 16px",
-            appearance: "none",
-            WebkitAppearance: "none",
             border: `1.5px solid ${focused ? C.orange : "#E2DFD8"}`,
-            borderRadius: 12,
-            outline: "none",
             boxShadow: focused
               ? "0 0 0 3px rgba(201,77,14,0.12)"
               : "0 1px 2px rgba(26,26,26,0.04) inset",
             background: focused ? "#FFFFFF" : "#F5F3EE",
-            fontSize: 15.5,
-            color: C.ink,
-            transition: "border-color 200ms ease, box-shadow 200ms ease, background 200ms ease",
-            fontFamily: "inherit",
-            lineHeight: 1,
           }}
         />
         {rightSlot}
       </div>
-      {hint && <div style={{ marginTop: 5 }}>{hint}</div>}
+      {hint && <div style={{ marginTop: 6 }}>{hint}</div>}
     </div>
   );
 }
@@ -416,3 +323,228 @@ function friendlyError(message: string): string {
   }
   return message;
 }
+
+const STYLES = `
+  .lf-root {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: grid;
+    grid-template-columns: 1fr;
+    background: ${C.canvas};
+  }
+  @media (min-width: 900px) {
+    .lf-root {
+      grid-template-columns: 1.05fr 1fr;
+      height: 100vh;
+      height: 100dvh;
+      min-height: 0;
+      overflow: hidden;
+    }
+  }
+
+  /* ── Brand panel ── */
+  .lf-brand {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 30px 32px 26px;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse 70% 50% at 22% 8%, rgba(245,133,42,0.16), transparent 60%),
+      radial-gradient(ellipse 80% 60% at 90% 100%, rgba(30,77,90,0.10), transparent 62%),
+      linear-gradient(160deg, #FFFDF9 0%, #F6F2EA 100%);
+    border-bottom: 1px solid ${C.line};
+  }
+  @media (min-width: 900px) {
+    .lf-brand {
+      padding: 32px 48px;
+      border-bottom: none;
+      border-right: 1px solid ${C.line};
+      align-items: center;
+    }
+  }
+  .lf-brand-veil {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(30,77,90,0.05) 0.5px, transparent 0.5px);
+    background-size: 22px 22px;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .lf-logo {
+    position: relative;
+    height: 30px;
+    width: auto;
+    display: block;
+    animation: lf-rise 0.7s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .lf-brand-inner {
+    position: relative;
+    margin: auto;
+    padding: 12px 0;
+    max-width: 460px;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  @media (max-width: 899px) {
+    .lf-brand-inner { display: none; }
+  }
+  .lf-orb-wrap {
+    margin: 0 0 2px;
+    animation: lf-rise 0.8s cubic-bezier(0.22,1,0.36,1) 60ms both;
+  }
+  .lf-eyebrow {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.18em;
+    text-transform: uppercase; color: ${C.orange}; margin: 0;
+    animation: lf-rise 0.7s cubic-bezier(0.22,1,0.36,1) 120ms both;
+  }
+  .lf-brand-title {
+    font-family: var(--font-display, Georgia, serif);
+    font-size: 34px; font-weight: 400; line-height: 1.08;
+    letter-spacing: -0.03em; color: ${C.ink}; margin: 12px 0 0; max-width: 12ch;
+    animation: lf-rise 0.7s cubic-bezier(0.22,1,0.36,1) 160ms both;
+  }
+  .lf-rule {
+    width: 52px; height: 2px; background: ${C.orange}; margin: 16px 0 0;
+    border-radius: 2px; opacity: 0.9;
+    animation: lf-rise 0.7s cubic-bezier(0.22,1,0.36,1) 200ms both;
+  }
+  .lf-brand-lede {
+    font-family: var(--font-text, Georgia, serif);
+    font-size: 15px; line-height: 1.55; color: ${C.inkSoft};
+    margin: 14px 0 0; max-width: 42ch;
+    animation: lf-rise 0.7s cubic-bezier(0.22,1,0.36,1) 230ms both;
+  }
+  .lf-highlights {
+    list-style: none; margin: 22px 0 0; padding: 0;
+    display: flex; flex-direction: column; gap: 14px; align-items: flex-start;
+  }
+  .lf-highlight {
+    display: flex; gap: 13px; align-items: flex-start; text-align: left;
+    animation: lf-rise 0.7s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .lf-highlight-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; flex-shrink: 0; border-radius: 10px;
+    background: rgba(30,77,90,0.08); color: #1E4D5A;
+  }
+  .lf-highlight-title {
+    display: block; font-size: 14px; font-weight: 600; color: ${C.ink};
+  }
+  .lf-highlight-body {
+    display: block; font-size: 13px; line-height: 1.5; color: ${C.inkMuted}; margin-top: 2px;
+  }
+  .lf-brand-foot {
+    position: relative; font-size: 12.5px; color: ${C.inkMuted}; margin: 0;
+    text-align: center;
+  }
+  @media (max-width: 899px) {
+    .lf-brand-foot { display: none; }
+  }
+
+  /* ── Form panel ── */
+  .lf-form-panel {
+    display: flex; align-items: center; justify-content: center;
+    padding: 44px 24px 40px;
+  }
+  .lf-form-col {
+    width: 100%; max-width: 384px;
+    animation: lf-rise 0.7s cubic-bezier(0.22,1,0.36,1) 120ms both;
+  }
+  .lf-mobile-orb {
+    display: flex; justify-content: center; margin: -18px 0 2px;
+  }
+  @media (min-width: 900px) {
+    .lf-mobile-orb { display: none; }
+  }
+  .lf-form-head { text-align: center; }
+  @media (min-width: 900px) {
+    .lf-form-head { text-align: left; }
+  }
+  .lf-form-eyebrow {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.16em;
+    text-transform: uppercase; color: #2E6B7A; margin: 0;
+  }
+  .lf-form-title {
+    font-family: var(--font-display, Georgia, serif);
+    font-size: 34px; font-weight: 400; line-height: 1.1;
+    letter-spacing: -0.03em; color: ${C.ink}; margin: 10px 0 0;
+  }
+  .lf-form-sub {
+    font-size: 14.5px; line-height: 1.55; color: ${C.inkMuted}; margin: 10px 0 0;
+  }
+  .lf-form {
+    margin-top: 30px; display: flex; flex-direction: column; gap: 22px;
+  }
+  .lf-field { display: flex; flex-direction: column; text-align: left; }
+  .lf-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; transition: color 200ms ease;
+    user-select: none; margin-bottom: 8px;
+  }
+  .lf-input {
+    display: block; width: 100%; box-sizing: border-box; height: 52px;
+    appearance: none; -webkit-appearance: none; border-radius: 12px; outline: none;
+    font-size: 15.5px; color: ${C.ink};
+    transition: border-color 200ms ease, box-shadow 200ms ease, background 200ms ease;
+    font-family: inherit; line-height: 1;
+  }
+  .lf-input::placeholder { color: ${C.inkFaint}; opacity: 1; }
+  .lf-input:-webkit-autofill,
+  .lf-input:-webkit-autofill:hover,
+  .lf-input:-webkit-autofill:focus {
+    -webkit-text-fill-color: ${C.ink};
+    -webkit-box-shadow: 0 0 0 1000px #F5F3EE inset;
+    box-shadow: 0 0 0 1000px #F5F3EE inset;
+    transition: background-color 9999s ease-in-out 0s;
+    caret-color: ${C.ink}; border-radius: 12px;
+  }
+  .lf-eye {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    border: none; background: transparent; color: ${C.inkFaint};
+    cursor: pointer; padding: 4px; display: flex; align-items: center;
+    transition: color 160ms ease;
+  }
+  .lf-eye:hover { color: ${C.inkSoft}; }
+  .lf-caps { color: ${C.danger}; font-size: 11.5px; font-weight: 500; }
+  .lf-error {
+    display: flex; align-items: center; gap: 8px; font-size: 13px;
+    color: ${C.danger}; line-height: 1.45;
+    background: rgba(168,74,61,0.07); border: 1px solid rgba(168,74,61,0.18);
+    border-radius: 10px; padding: 10px 12px;
+    animation: lf-shake 0.4s ease;
+  }
+  .lf-submit {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    height: 52px; width: 100%; border-radius: 12px; border: none;
+    color: #fff; font-size: 14.5px; font-weight: 600; letter-spacing: 0.01em;
+    transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+    margin-top: 4px;
+  }
+  .lf-submit:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 30px rgba(201,77,14,0.34) !important;
+    filter: saturate(1.05);
+  }
+  .lf-submit:not(:disabled):active { transform: translateY(0); }
+  .lf-submit:not(:disabled):hover .lf-arrow { transform: translateX(3px); }
+  .lf-arrow { transition: transform 180ms ease; }
+  .lf-spin { animation: lf-spin 1s linear infinite; }
+  .lf-legal {
+    margin: 24px 0 0; text-align: center; font-size: 12px; color: ${C.inkFaint};
+  }
+
+  @keyframes lf-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes lf-spin { to { transform: rotate(360deg); } }
+  @keyframes lf-shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lf-root *, .lf-root *::before { animation-duration: 0.001ms !important; }
+  }
+`;

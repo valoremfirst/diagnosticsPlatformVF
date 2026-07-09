@@ -1,6 +1,15 @@
 "use client";
 
-import { KeyRound, Loader2, Plus, Trash2, UserPlus, X } from "lucide-react";
+import {
+  KeyRound,
+  Loader2,
+  Plus,
+  ShieldCheck,
+  Trash2,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -126,18 +135,27 @@ export function UserAdmin({
     }
   }
 
+  const adminCount = users.filter((u) => u.role === "admin").length;
+  const clientCount = users.length - adminCount;
+
   return (
-    <Card className="p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm text-ink-muted">
-          {users.length} user{users.length === 1 ? "" : "s"}. Clients see only
-          their assigned company; admins see everything.
-        </p>
+    <Card className="overflow-hidden p-0">
+      <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-4">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-muted">
+          <span className="inline-flex items-center gap-1.5 font-medium text-ink-soft">
+            <Users className="h-4 w-4 text-ink-faint" />
+            {users.length} user{users.length === 1 ? "" : "s"}
+          </span>
+          <span className="text-ink-faint">·</span>
+          <span>{adminCount} admin</span>
+          <span className="text-ink-faint">·</span>
+          <span>{clientCount} client</span>
+        </div>
         {!adding && (
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-teal px-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            className="btn-teal h-9 shrink-0"
           >
             <Plus className="h-4 w-4" />
             Add user
@@ -145,6 +163,7 @@ export function UserAdmin({
         )}
       </div>
 
+      <div className="p-5">
       {adding && (
         <Card className="mb-4 border-dashed p-4">
           <div className="mb-3 flex items-center justify-between">
@@ -167,7 +186,7 @@ export function UserAdmin({
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email"
               autoComplete="off"
-              className="h-10 rounded-xl border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-faint focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-tint"
+              className="input-editorial h-10"
             />
             <input
               type="text"
@@ -175,12 +194,12 @@ export function UserAdmin({
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Temporary password (min 8 chars)"
               autoComplete="off"
-              className="h-10 rounded-xl border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-faint focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-tint"
+              className="input-editorial h-10"
             />
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as UserRole)}
-              className="h-10 rounded-xl border border-line bg-surface px-3 text-sm text-ink focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-tint"
+              className="input-editorial h-10"
             >
               <option value="client">Client</option>
               <option value="admin">Admin</option>
@@ -189,7 +208,7 @@ export function UserAdmin({
               value={companyId}
               onChange={(e) => setCompanyId(e.target.value)}
               disabled={role !== "client"}
-              className="h-10 rounded-xl border border-line bg-surface px-3 text-sm text-ink focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-tint disabled:opacity-50"
+              className="input-editorial h-10 disabled:opacity-50"
             >
               {companies.length === 0 && <option value="">No companies</option>}
               {companies.map((c) => (
@@ -204,11 +223,7 @@ export function UserAdmin({
               </p>
             )}
             <div className="sm:col-span-2 flex justify-end">
-              <button
-                type="submit"
-                disabled={busy}
-                className="inline-flex h-10 items-center gap-2 rounded-xl bg-teal px-5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-              >
+              <button type="submit" disabled={busy} className="btn-teal h-10 px-5">
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
                 Create user
               </button>
@@ -230,23 +245,54 @@ export function UserAdmin({
           <tbody>
             {users.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-ink-muted">
-                  No users yet. Add one to grant access.
+                <td colSpan={4} className="px-4 py-12">
+                  <div className="flex flex-col items-center gap-2 text-center">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-muted text-ink-faint">
+                      <Users className="h-5 w-5" />
+                    </span>
+                    <p className="text-sm font-medium text-ink-soft">
+                      No users yet
+                    </p>
+                    <p className="max-w-xs text-xs text-ink-muted">
+                      Add a client to grant read-only access to their company, or
+                      a fellow consultant as an admin.
+                    </p>
+                  </div>
                 </td>
               </tr>
             ) : (
               users.map((u) => (
-                <tr key={u.uid} className="border-b border-line last:border-0">
-                  <td className="px-4 py-3 font-medium text-ink">{u.email}</td>
+                <tr
+                  key={u.uid}
+                  className="border-b border-line transition-colors last:border-0 hover:bg-surface-muted/40"
+                >
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className={cn(
+                          "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold uppercase",
+                          u.role === "admin"
+                            ? "bg-teal-deep text-white"
+                            : "bg-surface-muted text-ink-soft",
+                        )}
+                      >
+                        {u.email.slice(0, 2)}
+                      </span>
+                      <span className="min-w-0 truncate font-medium text-ink">
+                        {u.email}
+                      </span>
+                    </div>
+                  </td>
                   <td className="px-4 py-3">
                     <span
                       className={cn(
-                        "inline-flex rounded-full px-2 py-0.5 text-xs font-semibold capitalize",
+                        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold capitalize",
                         u.role === "admin"
                           ? "bg-teal-tint text-teal"
                           : "bg-surface-muted text-ink-soft",
                       )}
                     >
+                      {u.role === "admin" && <ShieldCheck className="h-3 w-3" />}
                       {u.role}
                     </span>
                   </td>
@@ -256,7 +302,7 @@ export function UserAdmin({
                         value={u.companyId ?? ""}
                         disabled={pendingId === u.uid}
                         onChange={(e) => changeCompany(u.uid, e.target.value)}
-                        className="h-8 rounded-lg border border-line bg-surface px-2 text-xs text-ink focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-tint disabled:opacity-50"
+                        className="input-editorial h-8 rounded-lg px-2 text-xs disabled:opacity-50"
                       >
                         {companies.map((c) => (
                           <option key={c.id} value={c.id}>
@@ -279,7 +325,7 @@ export function UserAdmin({
                               onChange={(e) => { setResetPw(e.target.value); setResetError(null); }}
                               placeholder="New password (min 8)"
                               autoFocus
-                              className="h-8 w-44 rounded-lg border border-line bg-surface px-2 text-xs text-ink placeholder:text-ink-faint focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-tint"
+                              className="input-editorial h-8 w-44 rounded-lg px-2 text-xs"
                             />
                             <button
                               type="button"
@@ -336,6 +382,7 @@ export function UserAdmin({
             )}
           </tbody>
         </table>
+      </div>
       </div>
     </Card>
   );

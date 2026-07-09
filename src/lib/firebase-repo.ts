@@ -9,7 +9,7 @@ import type {
 } from "./types";
 
 export interface GlobalElevenLabsConfig {
-  agentIds: Partial<Record<DiagnosticFunction, string>>;
+  agentIds: Partial<Record<DiagnosticFunction, string>> & Record<string, string | undefined>;
   apiKey?: string;
 }
 
@@ -154,6 +154,19 @@ export async function setResult(
 
 export async function deleteSession(id: string): Promise<void> {
   await (await db()).collection(COLLECTIONS.sessions).doc(id).delete();
+}
+
+export async function deleteCompany(id: string): Promise<void> {
+  const firestore = await db();
+  // Delete all sessions belonging to this company first.
+  const sessions = await firestore
+    .collection(COLLECTIONS.sessions)
+    .where("companyId", "==", id)
+    .get();
+  const batch = firestore.batch();
+  for (const doc of sessions.docs) batch.delete(doc.ref);
+  batch.delete(firestore.collection(COLLECTIONS.companies).doc(id));
+  await batch.commit();
 }
 
 export async function listSessionsByCompany(

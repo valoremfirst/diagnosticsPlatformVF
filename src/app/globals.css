@@ -86,6 +86,21 @@
     @apply h-px w-20 border-0 bg-teal;
   }
 
+  /* Section eyebrow paired with a hairline that runs to the edge — used to
+     head editorial content bands on the portfolio overview. */
+  .section-rule {
+    @apply flex items-center gap-4;
+  }
+  .section-rule::after {
+    content: "";
+    @apply h-px flex-1 bg-line;
+  }
+
+  /* Faint stat-block used inside cards — a compact vertical label/value stack. */
+  .stat-block {
+    @apply flex flex-col gap-0.5;
+  }
+
   /* Serif editorial body copy (Source Serif 4). */
   .font-text {
     font-family: var(--font-text), Georgia, Cambria, serif;
@@ -123,6 +138,82 @@
     .glass-standard {
       background: rgba(255, 255, 255, 0.95);
     }
+  }
+
+  /* ── Redesign additions ─────────────────────────────────────────────────
+     Semantic utilities added during the app-wide elevation pass. They lean on
+     the existing token palette so nothing here introduces new colour. */
+
+  /* A short teal rule under a heading, in the neutral (line) tone. */
+  .divider-line {
+    @apply h-px w-16 border-0 bg-line-strong;
+  }
+
+  /* Editorial section header: eyebrow + serif title + trailing hairline.
+     Compose with .section-rule for the hairline; this just styles the title. */
+  .section-title {
+    @apply font-display text-lg leading-tight text-ink;
+  }
+
+  /* Frosted focus ring used on the redesigned inputs/buttons for a consistent,
+     accessible focus treatment across the app. */
+  .focus-ring {
+    @apply outline-none ring-offset-1 ring-offset-surface transition-shadow;
+  }
+  .focus-ring:focus-visible {
+    @apply ring-2 ring-teal-400/60;
+  }
+
+  /* Primary teal action — the app's canonical filled button. */
+  .btn-teal {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-teal px-4 text-sm font-semibold text-white transition-all;
+    box-shadow: 0 6px 16px rgba(30, 77, 90, 0.18);
+  }
+  .btn-teal:hover {
+    @apply bg-teal-deep;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(30, 77, 90, 0.24);
+  }
+  .btn-teal:active {
+    transform: translateY(0);
+  }
+  .btn-teal:disabled {
+    @apply cursor-not-allowed opacity-60;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Quiet secondary/ghost button. */
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-surface px-4 text-sm font-medium text-ink-soft transition-colors hover:border-line-strong hover:bg-surface-muted hover:text-ink;
+  }
+
+  /* Text input baseline — consistent height, warm sunken fill, teal focus. */
+  .input-editorial {
+    @apply h-11 w-full rounded-xl border border-line bg-surface-sunken px-3.5 text-sm text-ink transition-all placeholder:text-ink-faint;
+  }
+  .input-editorial:focus {
+    @apply border-teal-400 bg-surface outline-none ring-2 ring-teal-400/25;
+  }
+
+  /* Subtle top-lit panel used for hero/setup surfaces. */
+  .panel-lit {
+    @apply relative overflow-hidden rounded-2xl border border-line bg-surface shadow-card;
+  }
+  .panel-lit::before {
+    content: "";
+    @apply pointer-events-none absolute inset-x-0 top-0 h-px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(30, 77, 90, 0.25),
+      transparent
+    );
+  }
+
+  /* Staggered entrance for grids — pair with inline animationDelay. */
+  .rise-in {
+    animation: fade-in-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   /* Thin, restrained scrollbars for dense panels. */
