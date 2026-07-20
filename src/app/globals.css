@@ -232,4 +232,27 @@
   .scroll-slim::-webkit-scrollbar-track {
     background: transparent;
   }
+
+  /* ── Oracle editorial ornaments (board-pack / profile aesthetic) ───────── */
+
+  /* Drop cap — a serif teal initial that opens an editorial lede. */
+  .dropcap::first-letter {
+    font-family: var(--font-display), Georgia, Cambria, serif;
+    float: left;
+    font-size: 3.1em;
+    line-height: 0.8;
+    padding: 0.06em 0.1em 0 0;
+    color: theme("colors.teal.DEFAULT");
+    font-weight: 400;
+  }
+
+  /* Ornamental section divider — a hairline pair flanking a small mark. */
+  .ornament-rule {
+    @apply flex items-center gap-4 text-teal;
+  }
+  .ornament-rule::before,
+  .ornament-rule::after {
+    content: "";
+    @apply h-px flex-1 bg-line-strong;
+  }
 }

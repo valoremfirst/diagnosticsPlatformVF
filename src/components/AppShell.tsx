@@ -34,6 +34,12 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   // Clients get a fully chromeless experience — no left sidebar, ever. Their
   // home is the Oracle interview page (handled bare above); any other client
   // page renders under the same minimal top nav.
+  // Double-check interviews here too — x-pathname can be stale on first load,
+  // causing the bare-canvas guard above to miss and this branch to add ClientTopNav.
+  if (!isAdmin && /^\/companies\/[^/]+\/interviews(\/|$)/.test(pathname)) {
+    return <div className="min-h-screen bg-canvas">{children}</div>;
+  }
+
   if (!isAdmin) {
     const company = user.companyId
       ? await getCompany(user.companyId)
@@ -45,7 +51,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
           companyName={company?.name ?? ""}
           email={user.email}
         />
-        <main className="mx-auto w-full max-w-[1180px] px-6 pb-16 lg:px-8">
+        <main className="mx-auto w-full max-w-[1180px] px-6 pt-8 pb-16 lg:px-8">
           {children}
         </main>
       </div>

@@ -33,7 +33,9 @@ export function ClientTopNav({
         Diagnostics Platform
       </Link>
       <div className="flex items-center gap-4 text-sm text-ink-soft">
-        {companyName && <span className="hidden sm:inline">{companyName}</span>}
+        {companyName && (
+          <span className="hidden sm:inline text-ink-muted">{companyName}</span>
+        )}
         <AccountMenu email={email} />
       </div>
     </header>

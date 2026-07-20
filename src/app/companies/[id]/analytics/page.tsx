@@ -3,6 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AnalyticsCharts, type AnalyticsData } from "@/components/AnalyticsCharts";
+import {
+  ClientAnalyticsView,
+  type ClientRec,
+  type ClientRisk,
+} from "@/components/company/ClientAnalyticsView";
 import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/States";
@@ -10,7 +15,9 @@ import { Button } from "@/components/ui/Button";
 import { assertCompanyAccess } from "@/lib/auth";
 import { frameworkById, functionById } from "@/lib/frameworks";
 import { getCompany, listSessionsByCompany } from "@/lib/store";
-import { MATURITY_LABEL, maturityFromScore } from "@/lib/utils";
+import { MATURITY_LABEL, maturityFromScore, SEVERITY_RANK } from "@/lib/utils";
+
+const PRIORITY_RANK: Record<string, number> = { high: 3, medium: 2, low: 1 };
 
 export const dynamic = "force-dynamic";
 
@@ -38,23 +45,55 @@ export default async function CompanyAnalyticsPage({
   params: { id: string };
 }) {
   // Admins see any company; clients only their own (foreign IDs → notFound).
-  await assertCompanyAccess(params.id);
+  const user = await assertCompanyAccess(params.id);
+  const isAdmin = user.role === "admin";
 
   const company = await getCompany(params.id);
   if (!company) notFound();
+
+  // Clients live in the chromeless interview experience — their trail leads back
+  // there, not to the admin dashboard (which just redirects them anyway).
+  const crumbs = isAdmin
+    ? [
+        { label: "Dashboard", href: "/" },
+        { label: company.name, href: `/companies/${company.id}` },
+        { label: "Analytics" },
+      ]
+    : [
+        { label: "Interviews", href: `/companies/${company.id}/interviews` },
+        { label: "Analytics" },
+      ];
+  const backHref = isAdmin
+    ? `/companies/${company.id}`
+    : `/companies/${company.id}/interviews`;
 
   const sessions = await listSessionsByCompany(company.id);
   const scored = sessions.filter((s) => s.status === "complete" && s.result);
 
   if (scored.length === 0) {
+    // Clients get the branded, editorial empty state; admins keep the compact
+    // dashboard empty state under the sidebar chrome.
+    if (!isAdmin) {
+      return (
+        <ClientAnalyticsView
+          company={company}
+          overallScore={null}
+          maturityLabel={null}
+          scoredCount={0}
+          functionScores={[]}
+          totalRisks={0}
+          criticalRisks={0}
+          totalRecs={0}
+          topRisks={[]}
+          topRecs={[]}
+          backHref={backHref}
+        />
+      );
+    }
     return (
       <div className="animate-fade-in">
         <PageHeader
-          crumbs={[
-            { label: "Dashboard", href: "/" },
-            { label: company.name, href: `/companies/${company.id}` },
-            { label: "Analytics" },
-          ]}
+          crumbs={crumbs}
           title={`${company.name} analytics`}
           description="Trends, benchmarks and risk signals across this company's diagnostics."
         />
@@ -63,7 +102,7 @@ export default async function CompanyAnalyticsPage({
           title="No analytics yet"
           description="Analyse at least one transcript and the charts will populate here automatically."
           action={
-            <Link href={`/companies/${company.id}`}>
+            <Link href={backHref}>
               <Button>Back to company</Button>
             </Link>
           }
@@ -192,14 +231,59 @@ export default async function CompanyAnalyticsPage({
     portfolioScore,
   };
 
+  // Clients get the branded, editorial analytics experience that continues the
+  // Oracle interview aesthetic; admins keep the dense dashboard below.
+  if (!isAdmin) {
+    const topRisks: ClientRisk[] = scored
+      .flatMap((s) =>
+        s.result!.risks.map((r) => ({
+          title: r.title,
+          severity: r.severity,
+          description: r.description,
+          fn: functionById(s.function).label,
+        })),
+      )
+      .sort((a, b) => SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity])
+      .slice(0, 6);
+
+    const topRecs: ClientRec[] = scored
+      .flatMap((s) =>
+        s.result!.recommendations.map((r) => ({
+          title: r.title,
+          priority: r.priority,
+          impact: r.impact,
+          effort: r.effort,
+          description: r.description,
+          fn: functionById(s.function).label,
+        })),
+      )
+      .sort((a, b) => PRIORITY_RANK[b.priority] - PRIORITY_RANK[a.priority])
+      .slice(0, 6);
+
+    return (
+      <ClientAnalyticsView
+        company={company}
+        overallScore={portfolioScore}
+        maturityLabel={MATURITY_LABEL[maturityFromScore(portfolioScore)]}
+        scoredCount={scored.length}
+        functionScores={maturityByFunction.map((m) => ({
+          label: m.label,
+          score: m.score,
+        }))}
+        totalRisks={allRisks.length}
+        criticalRisks={criticalRisks}
+        totalRecs={totalRecs}
+        topRisks={topRisks}
+        topRecs={topRecs}
+        backHref={backHref}
+      />
+    );
+  }
+
   return (
     <div className="animate-fade-in">
       <PageHeader
-        crumbs={[
-          { label: "Dashboard", href: "/" },
-          { label: company.name, href: `/companies/${company.id}` },
-          { label: "Analytics" },
-        ]}
+        crumbs={crumbs}
         title={`${company.name} analytics`}
         description="Trends, benchmarks and risk signals across this company's diagnostics."
       />

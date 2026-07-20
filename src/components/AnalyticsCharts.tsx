@@ -112,7 +112,14 @@ function ChartTooltip({
 // Main
 // ---------------------------------------------------------------------------
 
-export function AnalyticsCharts({ data }: { data: AnalyticsData }) {
+export function AnalyticsCharts({
+  data,
+  accent = "#1E4D5A",
+}: {
+  data: AnalyticsData;
+  /** Line/area accent for the time series — brand-themed on the client view. */
+  accent?: string;
+}) {
   const totalRisks = data.riskBySeverity.reduce((a, b) => a + b.count, 0);
 
   return (
@@ -217,8 +224,8 @@ export function AnalyticsCharts({ data }: { data: AnalyticsData }) {
             >
               <defs>
                 <linearGradient id="areaTeal" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#1E4D5A" stopOpacity={0.28} />
-                  <stop offset="100%" stopColor="#1E4D5A" stopOpacity={0} />
+                  <stop offset="0%" stopColor={accent} stopOpacity={0.28} />
+                  <stop offset="100%" stopColor={accent} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <XAxis
@@ -234,16 +241,16 @@ export function AnalyticsCharts({ data }: { data: AnalyticsData }) {
                 tick={{ fill: "#A8A6A0", fontSize: 11 }}
               />
               <Tooltip
-                cursor={{ stroke: "#1E4D5A", strokeOpacity: 0.2 }}
+                cursor={{ stroke: accent, strokeOpacity: 0.2 }}
                 content={<ChartTooltip suffix=" completed" />}
               />
               <Area
                 type="monotone"
                 dataKey="count"
-                stroke="#1E4D5A"
+                stroke={accent}
                 strokeWidth={2.4}
                 fill="url(#areaTeal)"
-                dot={{ r: 3, fill: "#1E4D5A" }}
+                dot={{ r: 3, fill: accent }}
                 activeDot={{ r: 5 }}
               />
             </AreaChart>

@@ -525,7 +525,7 @@ function CallModal({
           className="font-display text-[17px] leading-none tracking-tight sm:text-[19px]"
           style={{ color: "#C94D0E" }}
         >
-          Diagnostics Platform - By VF
+          Diagnostics Platform 
         </div>
         <div className="flex items-center gap-3 text-sm text-ink-soft">
           {companyName && (

@@ -3,6 +3,7 @@
 import { signOut } from "firebase/auth";
 import {
   ArrowRight,
+  BarChart3,
   Check,
   ChevronDown,
   Clock,
@@ -10,6 +11,7 @@ import {
   Search,
   ShieldCheck,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, useMemo, useRef, useState } from "react";
 
@@ -60,6 +62,7 @@ export function InterviewsClient({
   brand,
   interviews,
   userEmail = "",
+  hasResults = false,
 }: {
   companyId: string;
   companyName: string;
@@ -67,6 +70,7 @@ export function InterviewsClient({
   interviews: InterviewItem[];
   isAdmin?: boolean;
   userEmail?: string;
+  hasResults?: boolean;
 }) {
   const router = useRouter();
 
@@ -141,22 +145,23 @@ export function InterviewsClient({
 
   return (
     <div
+      id="interview"
       className="relative min-h-screen bg-canvas paper-texture"
       style={brandVars(brand) as CSSProperties}
     >
       {/* ── Minimal top nav (wireframe): wordmark · business · avatar ──────── */}
       <header className="flex h-16 items-center justify-between px-6 sm:px-10">
         <div className="font-display text-[17px] leading-none tracking-tight sm:text-[19px]" style={{ color: "#C94D0E" }}>
-          Diagnostics Platform - By VF
+          Diagnostics Platform
         </div>
         <div className="flex items-center gap-4 text-sm text-ink-soft">
-          <span className="hidden sm:inline">{companyName}</span>
+          <span className="hidden sm:inline text-ink-muted">{companyName}</span>
           {userEmail && <AccountMenu email={userEmail} />}
         </div>
       </header>
 
-      {/* ── Centered first-contact hero ────────────────────────────────────── */}
-      <main className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-3xl flex-col items-center justify-center px-6 pb-16 pt-4 text-center">
+      {/* ── First-contact hero — top-anchored so the orb lands high on screen ── */}
+      <main className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-3xl flex-col items-center px-6 pb-16 pt-[8vh] text-center">
         <div className="animate-fade-in-up">
           <Orb agent={orbAgent} state="idle" size={200} interactive />
         </div>
@@ -254,6 +259,27 @@ export function InterviewsClient({
               </span>
             ))}
           </div>
+        )}
+
+        {done > 0 && (
+          <a
+            href="#results"
+            className="animate-fade-in-up mt-8 flex w-full max-w-sm items-center gap-4 rounded-2xl border border-line bg-surface px-5 py-4 text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover"
+          >
+            <div
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+              style={{ background: withAlpha(brand, 0.1) }}
+            >
+              <BarChart3 className="h-5 w-5" style={{ color: brand }} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold text-ink">Your results are ready</div>
+              <div className="mt-0.5 text-xs text-ink-muted">
+                {done} of {total} area{total === 1 ? "" : "s"} analysed · scroll to view
+              </div>
+            </div>
+            <ArrowRight className="h-4 w-4 shrink-0 text-ink-faint" />
+          </a>
         )}
 
         {/* ── Steer the conversation: intent box + agent switcher ──────────── */}
@@ -372,6 +398,16 @@ export function InterviewsClient({
           Your responses are confidential and help {companyName}&apos;s advisors
           build an accurate picture. You can pause or hang up at any time.
         </p>
+
+        {hasResults && (
+          <a
+            href="#results"
+            className="mt-10 flex flex-col items-center gap-1.5 text-[11px] text-ink-faint transition-colors hover:text-ink-muted"
+          >
+            <span>Your diagnostic results below</span>
+            <ChevronDown className="h-3.5 w-3.5 animate-bounce" />
+          </a>
+        )}
       </main>
     </div>
   );
